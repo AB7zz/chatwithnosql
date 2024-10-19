@@ -30,9 +30,9 @@ def calculate_similarity():
     # Fetch all vector IDs
     vector_ids = index.list(namespace='example-namespace')  # Adjust the namespace if needed
     for vector_id in vector_ids:
-        print(vector_id)
         fetched_vector = index.fetch(ids=vector_id, namespace='example-namespace')  # Adjust if using a specific namespace
-        print(fetched_vector)
+        print(fetched_vector.vectors)
+        # print(fetched_vector.vectors['vec1']['values'])
 
     # Extract embeddings and sentences
     text_embeddings = []
