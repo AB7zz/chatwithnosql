@@ -7,22 +7,22 @@ const Chat = () => {
   const [input, setInput] = useState('');
   const [isChatActive, setIsChatActive] = useState(false);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (input.trim()) {
       setMessages([...messages, { text: input, sender: 'user' }]);
       setInput('');
       // Simulate AI response
-      setTimeout(() => {
-        setMessages(prev => [...prev, { text: "This is a sample AI response.", sender: 'ai' }]);
-      }, 1000);
+      const res = await axios.post("http://localhost:3000/api/query", { query: input });
+      console.log(res.data)
+      setMessages(prev => [...prev, { text: res.data.result.answer, sender: 'ai' }]);
     }
   };
 
   const startNewChat = async() => {
     setIsChatActive(true);
     setMessages([]);
-    await axios.get('http://localhost:6000/api/data-lake')
+    await axios.get('http://localhost:3000/api/data-lake')
   };
 
   return (

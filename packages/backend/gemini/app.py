@@ -14,9 +14,10 @@ genai.configure(api_key=gemini_api_key)
 
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-@app.route('/chatgpt', methods=['POST'])
+@app.route('/gemini', methods=['POST'])
 def chatgpt():
     data = request.json
+    print(data)
     query = data.get('query')
     sentences = data.get('sentences')
 
@@ -33,17 +34,21 @@ Query: {query}
 
 Answer:"""
 
-    try:
+
+    # try:
         # Call Gemini API (hypothetical)
-        response = model.generate_content(prompt)
+    response = model.generate_content(prompt)
 
-        # Extract the response
-        answer = response.text
+    print(response.candidates[0].content.parts[0].text)
 
-        return jsonify({"answer": answer})
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    text = response.candidates[0].content.parts[0].text
+
+    print(text)
+    return jsonify({"answer": text})
+
+    # except Exception as e:
+    #     return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=9000)
