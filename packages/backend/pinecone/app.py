@@ -2,10 +2,15 @@ from flask import Flask, jsonify, request
 from pinecone.grpc import PineconeGRPC as Pinecone
 from dotenv import load_dotenv
 import os
+from flask_cors import CORS  # Import CORS
 
 load_dotenv()
 
-app = Flask(__name__)  # Initialize the Flask app
+# Initialize Flask application
+app = Flask(__name__)
+
+# Setup CORS globally for the app
+CORS(app)  # Initialize the Flask app
 
 app.config['PINECONE_API_KEY'] = os.getenv('PINECONE_API_KEY')
 
@@ -17,6 +22,8 @@ def addData():
     try:
         # Fetch data from the data lake API
         request_data = request.get_json()
+
+        print(request_data)
         
         if not request_data or 'data' not in request_data:
             return jsonify({"error": "No data provided"}), 400
@@ -32,4 +39,4 @@ def addData():
 
 # Start the Flask application
 if __name__ == '__main__':
-    app.run(debug=True, port=6000)
+    app.run(debug=True, port=7000)

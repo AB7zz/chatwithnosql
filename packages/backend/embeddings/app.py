@@ -2,16 +2,20 @@ from flask import Flask, jsonify, request
 from sentence_transformers import SentenceTransformer
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
+from flask_cors import CORS  # Import CORS
 
 # Initialize Flask application
 app = Flask(__name__)
+
+# Setup CORS globally for the app
+CORS(app)
 
 # Load the pre-trained model for embeddings
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Helper function to get data from the API
 def fetch_data_from_data_lake():
-    response = requests.get('http://127.0.0.1:5000/api/data/data-lake')
+    response = requests.get('http://127.0.0.1:6000/api/data/data-lake')
     if response.status_code != 200:
         raise ValueError("Failed to fetch data from data-lake API")
     return response.json()
@@ -77,9 +81,11 @@ def batch_embed_chunks_with_labels(text_data):
                 embeddings = future.result()
                 # Append the labeled chunk and its embedding with a unique ID
                 embeddings_list.append({
-                    "id": id_counter,  # Assign an incremental ID
-                    "text": labeled_chunk,
-                    "embedding": embeddings.tolist()  # Convert the embedding to a list for JSON serialization
+                    "id": "vec" + str(id_counter),  # Assign an incremental ID
+                    "metadata":{
+                        "text": labeled_chunk,
+                    },
+                    "values": embeddings.tolist()  # Convert the embedding to a list for JSON serialization
                 })
                 id_counter += 1  # Increment the ID for the next item
             except Exception as e:
@@ -114,4 +120,4 @@ def data_lake_embeddings():
 
 # Start the Flask application
 if __name__ == '__main__':
-    app.run(debug=True, port=6000)
+    app.run(debug=True, port=5000)

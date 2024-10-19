@@ -18,7 +18,7 @@ app.config['PINECONE_API_KEY'] = os.getenv('PINECONE_API_KEY')
 
 # Initialize Pinecone
 pc = Pinecone(api_key=app.config['PINECONE_API_KEY'], service_name='cosine-similarity')
-index = pc.Index("lol")
+index = pc.Index("bruh")
 
 
 @app.route('/calculate_similarity', methods=['POST'])
@@ -26,21 +26,25 @@ def calculate_similarity():
     # Get request data
     data = request.json
     query_embedding = np.array(data['query_embedding'])
-    
-    # Fetch all vector IDs
-    vector_ids = index.list(namespace='example-namespace')  # Adjust the namespace if needed
-    for vector_id in vector_ids:
-        fetched_vector = index.fetch(ids=vector_id, namespace='example-namespace')  # Adjust if using a specific namespace
-        print(fetched_vector.vectors)
-        # print(fetched_vector.vectors['vec1']['values'])
 
-    # Extract embeddings and sentences
+    vector_ids = index.list(namespace='vector-embeddings') 
+
+
     text_embeddings = []
     sentences = []
 
-    for vector in fetched_vectors.vectors:
-        text_embeddings.append(vector.values)  # Assuming the embeddings are stored in 'values'
-        sentences.append(vector.id)  # Assuming the vector ID corresponds to the sentence
+    for vector_id in vector_ids:
+        fetched_vector = index.fetch(ids=vector_id, namespace='vector-embeddings')
+        
+        # Extracting the vectors
+        vectors = fetched_vector.get('vectors', {})
+        
+        for vec_id, vector_data in vectors.items():
+            sentences.append(vec_id)  # Append the vector ID
+            text_embeddings.append(vector_data['values'])  # Append the vector values
+
+    print("IDs:", sentences)
+    print("Values:", text_embeddings)
 
     text_embeddings = np.array(text_embeddings)
 
@@ -63,4 +67,4 @@ def calculate_similarity():
     return jsonify({'results': results})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8000)
