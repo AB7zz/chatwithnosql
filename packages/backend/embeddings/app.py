@@ -40,14 +40,19 @@ def extract_text_from_data(data):
     # Extracting from phone_calls
     if 'phone_calls' in data:
         phone_call_texts = [entry.get('transcript', '') for entry in data['phone_calls']]
-        texts['phone_calls'] = phone_call_texts
-    # Extracting from social_media
+    texts['phone_calls'] = phone_call_texts
+
+# Extracting from social_media
     if 'social_media' in data:
         social_media_texts = [entry.get('text', '') for entry in data['social_media']]
         texts['social_media'] = social_media_texts
+
     # Extracting from website behavior
     if 'website_behavior' in data:
-        website_behavior_texts = [entry.get('page', '') for entry in data['website_behavior']]
+        website_behavior_texts = []
+        for entry in data['website_behavior']:
+            for key, value in entry.items():
+                website_behavior_texts.append(f"{key}: {value}")
         texts['website_behavior'] = website_behavior_texts
 
     return texts
