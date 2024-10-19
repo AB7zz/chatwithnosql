@@ -16,30 +16,38 @@ app = Flask(__name__)
 
 app.config['PINECONE_API_KEY'] = os.getenv('PINECONE_API_KEY')
 
+# Initialize Pinecone
 pc = Pinecone(api_key=app.config['PINECONE_API_KEY'], service_name='cosine-similarity')
-index = pc.Index("quickstart")
-
+index = pc.Index("lol")
 
 
 @app.route('/calculate_similarity', methods=['POST'])
 def calculate_similarity():
-
-    for ids in index.list(prefix="document1#", namespace="example-namespace"):
-        print(ids)
-    index.fetch(ids= ids, namespace="example-namespace")
-
-    print(ids)
-
-
-
+    # Get request data
     data = request.json
     query_embedding = np.array(data['query_embedding'])
-    text_embeddings = np.array(data['text_embeddings'])
-    sentences = data['sentences']
+    
+    # Fetch all vector IDs
+    vector_ids = index.list(namespace='example-namespace')  # Adjust the namespace if needed
+    for vector_id in vector_ids:
+        print(vector_id)
+        fetched_vector = index.fetch(ids=vector_id, namespace='example-namespace')  # Adjust if using a specific namespace
+        print(fetched_vector)
+
+    # Extract embeddings and sentences
+    text_embeddings = []
+    sentences = []
+
+    for vector in fetched_vectors.vectors:
+        text_embeddings.append(vector.values)  # Assuming the embeddings are stored in 'values'
+        sentences.append(vector.id)  # Assuming the vector ID corresponds to the sentence
+
+    text_embeddings = np.array(text_embeddings)
 
     if query_embedding.ndim == 1:
         query_embedding = query_embedding.reshape(1, -1)
 
+    # Calculate cosine similarities
     similarities = cosine_similarity(query_embedding, text_embeddings)[0]
     top_indices = np.argsort(similarities)[-5:][::-1]
 

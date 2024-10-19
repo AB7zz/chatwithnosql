@@ -1,15 +1,18 @@
 from flask import Flask, request, jsonify
 import os
-import openai
 from dotenv import load_dotenv
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
-# Set up OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+
+genai.configure(api_key=gemini_api_key)
+
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 @app.route('/chatgpt', methods=['POST'])
 def chatgpt():
@@ -31,17 +34,11 @@ Query: {query}
 Answer:"""
 
     try:
-        # Call OpenAI API
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that answers questions based on the given context."},
-                {"role": "user", "content": prompt}
-            ]
-        )
+        # Call Gemini API (hypothetical)
+        response = model.generate_content(prompt)
 
         # Extract the response
-        answer = response.choices[0].message['content'].strip()
+        answer = response.text
 
         return jsonify({"answer": answer})
 
