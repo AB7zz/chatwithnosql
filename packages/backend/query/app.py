@@ -88,7 +88,7 @@ def batch_embed_chunks_with_labels(text_data):
     return embeddings_list
 
 # Route for fetching data, processing it, and returning embeddings
-@app.route('/api/prompt', methods=['GET'])
+@app.route('/api/data-lake', methods=['GET'])
 def data_lake_embeddings():
     try:
         # Fetch data from the data lake API
@@ -99,6 +99,12 @@ def data_lake_embeddings():
 
         # Embed the chunks with labels and return as array of JSON objects
         embeddings_list = batch_embed_chunks_with_labels(text_data)
+        response = requests.post('http://localhost:7000/api/addData', json={"data": embeddings_list})
+
+        # Check if the POST request was successful
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to add data to embedding store", "details": response.text}), 500
+
 
         # Return the embeddings in array format
         return jsonify(embeddings_list)
