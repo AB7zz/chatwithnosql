@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 
 const Choose = () => {
   const dataWarehouses = [
-    { name: 'Snowflake', logo: 'https://www.snowflake.com/wp-content/themes/snowflake/assets/img/snowflake-logo-blue.svg' },
-    { name: 'Amazon Redshift', logo: 'https://d1.awsstatic.com/Products/product-name/diagrams/product-page-diagram-Amazon-Redshift_HIW.cf2d4d3494f9b1a65d4bf950496ceb37c8f7c046.png' },
-    { name: 'Google BigQuery', logo: 'https://www.gstatic.com/devrel-devsite/prod/v2f6fb68338062e7c16672db62c4ab042dcb9bfbacf2fa51b6959426b203a4d8a/cloud/images/favicons/onecloud/apple-icon.png' },
+    { name: 'Snowflake', logo: 'https://companieslogo.com/img/orig/SNOW-35164165.png?t=1720244494' },
+    { name: 'Amazon Redshift', logo: 'https://cdn.prod.website-files.com/625447c67b621ab49bb7e3e5/6511e6855e26e61247127ecb_63bdba82fbba1214de98c30d_1862px-Amazon-Redshift-Logo.svg%255B1%255D.png' },
+    { name: 'Google BigQuery', logo: 'https://cdn.worldvectorlogo.com/logos/google-bigquery-logo-1.svg' },
   ]
 
   return (
