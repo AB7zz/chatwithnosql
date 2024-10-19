@@ -3,13 +3,35 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.tokenize import sent_tokenize
+from pinecone.grpc import PineconeGRPC as Pinecone
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv()
 
 nltk.download('punkt')
 
 app = Flask(__name__)
 
+app.config['PINECONE_API_KEY'] = os.getenv('PINECONE_API_KEY')
+
+pc = Pinecone(api_key=app.config['PINECONE_API_KEY'], service_name='cosine-similarity')
+index = pc.Index("quickstart")
+
+
+
 @app.route('/calculate_similarity', methods=['POST'])
 def calculate_similarity():
+
+    for ids in index.list(prefix="document1#", namespace="example-namespace"):
+        print(ids)
+    index.fetch(ids= ids, namespace="example-namespace")
+
+    print(ids)
+
+
+
     data = request.json
     query_embedding = np.array(data['query_embedding'])
     text_embeddings = np.array(data['text_embeddings'])
