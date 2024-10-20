@@ -2,6 +2,8 @@ from flask import Flask, jsonify
 # import json
 import os
 from googleapiclient.discovery import build
+import csv
+
 # import requests
 
 # Initialize the Flask application
@@ -49,15 +51,33 @@ def fetch_email_data():
     #         })
     
     # return email_data
-    return [{
-        "id": 1,
-        "snippet": "Hello, this is a test email.",
+    csv_data = []
+    file_path = 'data.csv' 
+
+    with open(file_path, newline='', encoding='ISO-8859-1') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        for i, row in enumerate(csv_reader):
+            if i == 0:
+                continue  
+            if i > 100:  
+                break
+            if len(row) > 1: 
+                csv_data.append({
+                    "id" : len(csv_data) + 1,
+                    "snippet" : row[1]
+                })
+
+    return csv_data
+    
+    # return [{
+    #     "id": 1,
+    #     "snippet": "Hello, this is a test email.",
         
         
-    }],{
-        "id": 2,
-        "snippet": "This is another test email."
-    }
+    # }],{
+    #     "id": 2,
+    #     "snippet": "This is another test email."
+    # }
 
 # Pulling data from a social media platform using their API (for example Twitter)
 def fetch_social_media_data():
@@ -108,10 +128,10 @@ def collect_data():
     # Combine data into one dictionary
     combined_data = {
         "emails": email_data,
-        "social_media": social_media_data,
-        "phone_calls": phone_call_data,
-        "website_behavior": website_behavior_data,
-        "crm_data": crm_data
+        # "social_media": social_media_data,
+        # "phone_calls": phone_call_data,
+        # "website_behavior": website_behavior_data,
+        # "crm_data": crm_data
     }
     
     return combined_data
