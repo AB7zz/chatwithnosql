@@ -25,9 +25,9 @@ def parse_pdf_to_text(pdf_file_path):
     return extracted_text
 
 # Example usage
-pdf_file_path = 'example.pdf'
-text = parse_pdf_to_text(pdf_file_path)
-print(text)
+# pdf_file_path = 'example.pdf'
+# text = parse_pdf_to_text(pdf_file_path)
+# print(text)
 
 def parse_text_from_image_easyocr(image_file_path):
     # Initialize the EasyOCR reader
