@@ -41,9 +41,9 @@ def parse_text_from_image_easyocr(image_file_path):
     
     return extracted_text
 
-image_file_path = 'example_image.png'
-text = parse_text_from_image_easyocr(image_file_path)
-print(text)
+# image_file_path = 'example_image.png'
+# text = parse_text_from_image_easyocr(image_file_path)
+# print(text)
 
 
 def authenticate_gmail_api():
