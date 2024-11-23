@@ -33,14 +33,14 @@ def extract_text_from_data(data):
         for entry in data['emails']:
             if isinstance(entry, list):
                 for email in entry:
-                    email_texts.append(email.get('snippet', ''))
+                    email_texts.append(email.get('type', '') + email.get('snippet', ''))
             else:
-                email_texts.append(entry.get('snippet', ''))
+                email_texts.append(entry.get('type', '') + entry.get('snippet', ''))
         texts['emails'] = email_texts
     # Extracting from phone_calls
     if 'phone_calls' in data:
         phone_call_texts = [entry.get('transcript', '') for entry in data['phone_calls']]
-    texts['phone_calls'] = phone_call_texts
+        texts['phone_calls'] = phone_call_texts
 
 # Extracting from social_media
     if 'social_media' in data:

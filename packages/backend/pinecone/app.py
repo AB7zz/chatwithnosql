@@ -15,7 +15,7 @@ CORS(app)  # Initialize the Flask app
 app.config['PINECONE_API_KEY'] = os.getenv('PINECONE_API_KEY')
 
 pc = Pinecone(api_key=app.config['PINECONE_API_KEY'], service_name='cosine-similarity')
-index = pc.Index("bruh")
+index = pc.Index("makeaton")
 
 @app.route('/api/addData', methods=['POST'])
 def addData():

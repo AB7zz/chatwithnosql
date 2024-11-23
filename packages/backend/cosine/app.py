@@ -7,18 +7,21 @@ from pinecone.grpc import PineconeGRPC as Pinecone
 from dotenv import load_dotenv
 import os
 import requests
+from flask_cors import CORS  # Import CORS
+
 
 load_dotenv()
 
 nltk.download('punkt')
 
 app = Flask(__name__)
+CORS(app)
 
 app.config['PINECONE_API_KEY'] = os.getenv('PINECONE_API_KEY')
 
 # Initialize Pinecone
 pc = Pinecone(api_key=app.config['PINECONE_API_KEY'], service_name='cosine-similarity')
-index = pc.Index("bruh")
+index = pc.Index("makeaton")
 
 
 @app.route('/calculate_similarity', methods=['POST'])
@@ -67,6 +70,8 @@ def calculate_similarity():
         }
         for idx in top_indices
     ]
+
+    print(results)
 
     sentences = [result["metadata"] for result in results]
     print(type(sentences), sentences)

@@ -101,10 +101,12 @@ def fetch_email_data():
             if len(row) > 1: 
                 csv_data.append({
                     "id" : len(csv_data) + 1,
-                    "snippet" : row[1]
+                    "snippet" : row[1],
+                    "type": row[0]
                 })
 
     return csv_data
+
     
     # return [{
     #     "id": 1,
