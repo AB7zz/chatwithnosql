@@ -3,8 +3,8 @@ from flask import Flask, jsonify
 import os
 from googleapiclient.discovery import build
 import csv
-import PyPDF2
-import easyocr
+# import PyPDF2
+# import easyocr
 # import requests
 
 # Initialize the Flask application
@@ -25,25 +25,25 @@ def parse_pdf_to_text(pdf_file_path):
     return extracted_text
 
 # Example usage
-pdf_file_path = 'example.pdf'
-text = parse_pdf_to_text(pdf_file_path)
-print(text)
+# pdf_file_path = 'example.pdf'
+# text = parse_pdf_to_text(pdf_file_path)
+# print(text)
 
-def parse_text_from_image_easyocr(image_file_path):
-    # Initialize the EasyOCR reader
-    reader = easyocr.Reader(['en'])
+# def parse_text_from_image_easyocr(image_file_path):
+#     # Initialize the EasyOCR reader
+#     reader = easyocr.Reader(['en'])
     
-    # Perform OCR on the image
-    result = reader.readtext(image_file_path, detail=0)
+#     # Perform OCR on the image
+#     result = reader.readtext(image_file_path, detail=0)
     
-    # Combine the results into a single text string
-    extracted_text = '\n'.join(result)
+#     # Combine the results into a single text string
+#     extracted_text = '\n'.join(result)
     
-    return extracted_text
+#     return extracted_text
 
-image_file_path = 'example_image.png'
-text = parse_text_from_image_easyocr(image_file_path)
-print(text)
+# image_file_path = 'example_image.png'
+# text = parse_text_from_image_easyocr(image_file_path)
+# print(text)
 
 
 def authenticate_gmail_api():

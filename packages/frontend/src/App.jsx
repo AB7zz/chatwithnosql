@@ -3,16 +3,22 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Connect from './pages/Connect'
 import Choose from './pages/Choose'
 import Chat from './pages/Chat'
+import FileExplorer from './pages/FileExplorer'
+import Navbar from './components/Navbar/Navbar'
+import Home from './pages/Home'
 
 function App() {
 
   return (
     <>
       <BrowserRouter>
+        <Navbar />
         <Routes>
+          <Route path="/" element={<Home />} />
           <Route path="/connect" element={<Connect />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/choose" element={<Choose />} />
+          <Route path="/files/:chatId" element={<FileExplorer />} />
         </Routes>
       </BrowserRouter>
     </>

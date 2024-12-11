@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+    font-family: 'Satoshi';
+    src: url('./fonts/Satoshi-Regular.woff2') format('woff2'),
+         url('./fonts/Satoshi-Regular.woff') format('woff'),
+         url('./fonts/Satoshi-Regular.ttf') format('truetype'),
+         url('./fonts/Satoshi-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-display: swap;
+    font-style: normal;
+}
+
+/* Then create a class that uses the font */
+.font-ab7 {
+    font-family: 'Satoshi', sans-serif; /* Include fallback fonts */
+}
+
+* {
+    font-family: 'Satoshi', sans-serif;
+}
+
+main {
+    padding-top: 4rem; /* 64px to account for the navbar height */
+  }
