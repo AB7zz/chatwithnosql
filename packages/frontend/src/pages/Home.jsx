@@ -88,7 +88,7 @@ const Home = () => {
       color: "from-blue-500 to-cyan-500"
     },
     {
-      title: "Legal Documents",
+      title: "Decision Making",
       description: "Analyze contracts and legal documents for faster decision making",
       color: "from-purple-500 to-pink-500"
     },

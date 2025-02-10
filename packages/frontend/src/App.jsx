@@ -6,7 +6,7 @@ import Chat from './pages/Chat'
 import FileExplorer from './pages/FileExplorer'
 import Navbar from './components/Navbar/Navbar'
 import Home from './pages/Home'
-
+import Profile from './pages/Profile'
 function App() {
 
   return (
@@ -19,6 +19,7 @@ function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/choose" element={<Choose />} />
           <Route path="/files/:chatId" element={<FileExplorer />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </BrowserRouter>
     </>

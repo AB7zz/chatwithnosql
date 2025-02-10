@@ -23,10 +23,10 @@ const Chat = () => {
       setIsTyping(true);
       
       try {
-        const res = await axios.post("http://localhost:3000/api/query", { query: input });
+        const res = await axios.post("http://localhost:5000/api/process-query", { query: input });
         setIsTyping(false);
         setMessages(prev => [...prev, { 
-          text: res.data.result.answer, 
+          text: res.data.answer, 
           sender: 'ai',
           timestamp: new Date() 
         }]);
@@ -45,7 +45,7 @@ const Chat = () => {
   const startNewChat = async() => {
     setIsChatActive(true);
     setMessages([]);
-    await axios.get('http://localhost:3000/api/data-lake')
+    await axios.get('http://localhost:5000/api/data-lake')
   };
 
   return (

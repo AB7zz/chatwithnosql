@@ -76,7 +76,7 @@ const Connect = () => {
         initial={{ y: -50 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 100 }}
-        className="text-4xl font-bold mb-4 text-white text-center"
+        className="text-4xl font-bold mb-4 text-white text-center mt-10"
       >
         Connect Your Warehouse
       </motion.h1>
