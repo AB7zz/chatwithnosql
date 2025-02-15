@@ -16,7 +16,10 @@ This project is meant to be used by large companies to search for information in
 
 # How to run the project
 
-1. Install the dependencies: `pip install flask flask-cors sentence-transformers requests numpy scikit-learn nltk pinecone-client python-dotenv google-api-python-client PyPDF2 easyocr`
-2. Run each service in a separate terminal:
-    - `python packages/backend/app.py`
-3. Run the frontend: `cd packages/frontend && npm install && npm run dev`
+## Backend
+1. Install the dependencies for each service: `pip install -r requirements.txt`
+2. Run the API: `python packages/backend/app.py`
+
+## Frontend
+1. Install the dependencies: `npm install`
+2. Run the frontend: `cd packages/frontend && npm install && npm run dev`
