@@ -18,9 +18,5 @@ This project is meant to be used by large companies to search for information in
 
 1. Install the dependencies: `pip install flask flask-cors sentence-transformers requests numpy scikit-learn nltk pinecone-client python-dotenv google-api-python-client PyPDF2 easyocr`
 2. Run each service in a separate terminal:
-    - `python packages/backend/data-lake/app.py`
-    - `python packages/backend/embeddings/app.py`
-    - `python packages/backend/cosine/app.py`
-    - `python packages/backend/gemini/app.py`
-    - `python packages/backend/pinecone/app.py`
+    - `python packages/backend/app.py`
 3. Run the frontend: `cd packages/frontend && npm install && npm run dev`
