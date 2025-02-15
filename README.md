@@ -19,7 +19,7 @@ This project is meant to be used by large companies to search for information in
 ## Backend
 1. For the first time, run the following commands to setup the environment:
    - `cd packages/backend`
-   - `conda create -n chatwithnosql python=3.11`
+   - `conda create -n chatwithnosql python=3.10`
    - `conda activate chatwithnosql`
    - `pip install -r requirements.txt`
 2. Run the API: `python packages/backend/app.py`
