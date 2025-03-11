@@ -245,8 +245,8 @@ def collect_data():
             'website_behavior': fetch_website_behavior_data(),
             'crm_data': fetch_crm_data(),
             'pdfs': extract_text_from_pdf(),
-            'images': extract_text_from_images(),
-            'audio': extract_text_from_audio(),
+            # 'images': extract_text_from_images(),
+            # 'audio': extract_text_from_audio(),
             # 'video': extract_text_from_video()
         }
         return data
@@ -446,13 +446,35 @@ def calculate_similarity(query, query_embedding):
     # Call Gemini internally
     gemini_response = process_gemini(query, sentences)
     
-    return {
-        'similar_texts': results,
-        'answer': gemini_response['answer']
-    }
+    # Return the response directly since process_gemini already formats it correctly
+    return gemini_response
 
 def process_gemini(query, sentences):
-    prompt = f"""Given the following context and query, provide a relevant and concise answer.
+    if 'graph' in query.lower():
+        # Modified prompt for graph data
+        prompt = f"""Given the following context and query, provide data that can be visualized as a chart. Return the response in this exact JSON format:
+{{
+    "type": "bar",  # Specify one of: bar, line, pie, doughnut
+    "data": {{
+        "labels": ["label1", "label2", ...],  # List of x-axis labels or categories
+        "datasets": [
+            {{
+                "label": "Dataset Label",
+                "data": [value1, value2, ...],  # Numerical values corresponding to labels
+                "backgroundColor": ["#color1", "#color2", ...],  # Optional: colors for each data point
+            }}
+        ]
+    }}
+}}
+
+Context:
+{' '.join(sentences)}
+
+Query: {query}
+
+Generate appropriate chart data based on the context and query:"""
+    else:
+        prompt = f"""Given the following context and query, provide a relevant and concise answer.
 
 Context:
 {' '.join(sentences)}
@@ -464,7 +486,39 @@ Answer:"""
     response = gemini_model.generate_content(prompt)
     text = response.candidates[0].content.parts[0].text
 
-    return {"answer": text}
+    if 'graph' in query.lower():
+        try:
+            # Clean the text response by removing markdown formatting
+            clean_text = text.replace('```json\n', '').replace('```', '').strip()
+            # Parse the JSON response from Gemini
+            import json
+            chart_data = json.loads(clean_text)
+            print(f"Chart data: {chart_data}")
+            return {
+                "type": "graph",
+                "graphData": chart_data
+            }
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON: {e}")
+            # Fallback to generate basic chart data
+            basic_chart_data = {
+                "type": "bar",
+                "data": {
+                    "labels": ["Data 1", "Data 2"],
+                    "datasets": [{
+                        "label": "Sample Data",
+                        "data": [10, 20],
+                        "backgroundColor": ["#36A2EB", "#FF6384"]
+                    }]
+                }
+            }
+            return {
+                "type": "graph",
+                "graphData": basic_chart_data
+            }
+    else:
+        print(f"Ans resp: {text}")
+        return {"answer": text}
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, PlusCircle, Settings, Loader, Send, Trash2, FileText } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
+import { Chart, registerables } from 'chart.js';
+
+// Register chart.js components
+Chart.register(...registerables);
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -13,7 +17,67 @@ const Chat = () => {
     { id: 1, title: 'Previous Chat 1', timestamp: '2h ago', fileCount: 5 },
     { id: 2, title: 'Previous Chat 2', timestamp: '1d ago', fileCount: 3 },
   ]);
+  const chartRefs = useRef({});
+  const chatContainerRef = useRef(null);
+
   const navigate = useNavigate();
+
+  // Effect to scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Effect to render charts when messages change
+  useEffect(() => {
+    messages.forEach((message, index) => {
+      if (message.chartData && chartRefs.current[index]) {
+        const ctx = chartRefs.current[index].getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (chartRefs.current[index].chart) {
+          chartRefs.current[index].chart.destroy();
+        }
+
+        // Create new chart instance with the data
+        chartRefs.current[index].chart = new Chart(ctx, {
+          type: message.chartData.type,
+          data: message.chartData.data,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  color: '#fff'
+                }
+              }
+            },
+            scales: {
+              y: {
+                ticks: {
+                  color: '#fff'
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              },
+              x: {
+                ticks: {
+                  color: '#fff'
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+  }, [messages]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -21,15 +85,25 @@ const Chat = () => {
       setMessages([...messages, { text: input, sender: 'user', timestamp: new Date() }]);
       setInput('');
       setIsTyping(true);
-      
+
       try {
-        const res = await axios.post("http://localhost:5000/api/process-query", { query: input });
+        const res = await axios.post('http://localhost:5000/api/process-query', { query: input });
         setIsTyping(false);
-        setMessages(prev => [...prev, { 
-          text: res.data.answer, 
-          sender: 'ai',
-          timestamp: new Date() 
-        }]);
+
+        if (res.data.type === 'graph') {
+          setMessages(prev => [...prev, { 
+            text: "Here's a visualization of the data:", 
+            sender: 'ai', 
+            timestamp: new Date(),
+            chartData: res.data.graphData
+          }]);
+        } else {
+          setMessages(prev => [...prev, { 
+            text: res.data.answer, 
+            sender: 'ai', 
+            timestamp: new Date() 
+          }]);
+        }
       } catch (error) {
         setIsTyping(false);
         setMessages(prev => [...prev, { 
@@ -42,19 +116,19 @@ const Chat = () => {
     }
   };
 
-  const startNewChat = async() => {
+  const startNewChat = async () => {
     setIsChatActive(true);
     setMessages([]);
-    await axios.get('http://localhost:5000/api/data-lake')
+    await axios.get('http://localhost:5000/api/data-lake');
   };
 
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex h-screen bg-gradient-to-br from-gray-900 to-gray-800"
+      className="flex min-h-screen bg-gradient-to-br from-gray-900 to-gray-800"
     >
-      {/* Enhanced Sidebar */}
+      {/* Sidebar */}
       <motion.div 
         initial={{ x: -50 }}
         animate={{ x: 0 }}
@@ -103,7 +177,7 @@ const Chat = () => {
         </div>
       </motion.div>
 
-      {/* Enhanced Chat Interface */}
+      {/* Chat Interface */}
       <div className="flex-1 flex flex-col">
         <AnimatePresence mode="wait">
           {isChatActive ? (
@@ -112,9 +186,12 @@ const Chat = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="flex-1 flex flex-col"
+              className="flex-1 flex flex-col h-screen"
             >
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto p-6 space-y-6"
+              >
                 {messages.map((message, index) => (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -134,6 +211,14 @@ const Chat = () => {
                       <div className="text-xs opacity-50 mt-2">
                         {new Date(message.timestamp).toLocaleTimeString()}
                       </div>
+                      {message.chartData && (
+                        <div className="mt-4 h-[300px] w-[500px]">
+                          <canvas 
+                            ref={el => chartRefs.current[index] = el}
+                            className="w-full h-full"
+                          />
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -149,7 +234,7 @@ const Chat = () => {
                 )}
               </div>
 
-              {/* Enhanced Input Form */}
+              {/* Input Form */}
               <motion.form 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
