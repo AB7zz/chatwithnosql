@@ -1,17 +1,29 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, MessageSquare, Database, User } from 'lucide-react';
+import { Home, MessageSquare, Database, User, LogOut } from 'lucide-react';
+import { auth } from '../../firebase/config.js';
+import { useAuthState } from 'react-firebase-hooks/auth';
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [user] = useAuthState(auth);
 
   const navItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/choose', icon: Database, label: 'Warehouse' },
     { path: '/chat', icon: MessageSquare, label: 'Chat' },
-    // { path: '/profile', icon: User, label: 'Profile' },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   return (
     <motion.nav 
@@ -60,14 +72,46 @@ const Navbar = () => {
           </div>
 
           {/* User Section */}
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            className="flex items-center"
-          >
-            <button className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200">
-              <span>Connect</span>
-            </button>
-          </motion.div>
+          <div className="flex items-center space-x-2">
+            {user ? (
+              <>
+                <Link to="/profile">
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="flex items-center"
+                  >
+                    <button className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200">
+                      <User size={18} className="mr-2" />
+                      <span>Profile</span>
+                    </button>
+                  </motion.div>
+                </Link>
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center"
+                >
+                  <button 
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200"
+                  >
+                    <LogOut size={18} className="mr-2" />
+                    <span>Logout</span>
+                  </button>
+                </motion.div>
+              </>
+            ) : (
+              <Link to="/login">
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center"
+                >
+                  <button className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200">
+                    <span>Login</span>
+                  </button>
+                </motion.div>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </motion.nav>
