@@ -1,8 +1,212 @@
-import React, { useState, useEffect } from 'react';
+// import React, { useState, useEffect } from 'react';
+// import { MessageSquare, PlusCircle, Settings, Loader, Send, Trash2, FileText } from 'lucide-react';
+// import axios from 'axios';
+// import { motion, AnimatePresence } from 'framer-motion';
+// import { useNavigate, Link } from 'react-router-dom';
+
+// const Chat = () => {
+//   const [messages, setMessages] = useState([]);
+//   const [input, setInput] = useState('');
+//   const [isChatActive, setIsChatActive] = useState(false);
+//   const [isTyping, setIsTyping] = useState(false);
+//   const [chatHistory, setChatHistory] = useState([
+//     { id: 1, title: 'Previous Chat 1', timestamp: '2h ago', fileCount: 5 },
+//     { id: 2, title: 'Previous Chat 2', timestamp: '1d ago', fileCount: 3 },
+//   ]);
+//   const navigate = useNavigate();
+
+//   const handleSend = async (e) => { 
+//     e.preventDefault();
+//     if (input.trim()) {
+//       setMessages([...messages, { text: input, sender: 'user', timestamp: new Date() }]);
+//       setInput('');
+//       setIsTyping(true);
+      
+//       try {
+//         const res = await axios.post("http://localhost:5000/api/process-query", { query: input });
+//         setIsTyping(false);
+//         setMessages(prev => [...prev, { 
+//           text: res.data.answer, 
+//           sender: 'ai',
+//           timestamp: new Date() 
+//         }]);
+//       } catch (error) {
+//         setIsTyping(false);
+//         setMessages(prev => [...prev, { 
+//           text: "Sorry, I encountered an error. Please try again.", 
+//           sender: 'ai',
+//           timestamp: new Date(),
+//           isError: true 
+//         }]);
+//       }
+//     }
+//   };
+
+//   const startNewChat = async() => {
+//     setIsChatActive(true);
+//     setMessages([]);
+//     await axios.get('http://localhost:5000/api/data-lake')
+//   };
+
+//   return (
+//     <motion.div 
+//       initial={{ opacity: 0 }}
+//       animate={{ opacity: 1 }}
+//       className="flex h-screen bg-gradient-to-br from-gray-900 to-gray-800"
+//     >
+//       {/* Enhanced Sidebar */}
+//       <motion.div 
+//         initial={{ x: -50 }}
+//         animate={{ x: 0 }}
+//         className="w-64 bg-gray-800/50 backdrop-blur-xl text-gray-100 p-4 border-r border-gray-700"
+//       >
+//         <button 
+//           className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 w-full p-3 rounded-lg mb-6 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
+//           onClick={startNewChat}
+//         >
+//           <PlusCircle size={20} />
+//           <span>New chat</span>
+//         </button>
+
+//         <div className="space-y-2">
+//           {chatHistory.map((chat) => (
+//             <motion.div
+//               key={chat.id}
+//               whileHover={{ scale: 1.02 }}
+//               className="flex items-center space-x-3 p-3 hover:bg-gray-700/50 rounded-lg cursor-pointer group"
+//             >
+//               <MessageSquare size={18} />
+//               <div className="flex-1">
+//                 <p className="text-sm font-medium">{chat.title}</p>
+//                 <p className="text-xs text-gray-400">{chat.timestamp}</p>
+//               </div>
+//               <Link 
+//                 to={`/files/${chat.id}`}
+//                 className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 bg-blue-500/20 rounded-md hover:bg-blue-500/30 text-blue-400 text-xs flex items-center gap-1"
+//               >
+//                 <FileText size={14} />
+//                 <span>{chat.fileCount} files</span>
+//               </Link>
+//               <Trash2 
+//                 size={16} 
+//                 className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-opacity"
+//               />
+//             </motion.div>
+//           ))}
+//         </div>
+
+//         <div className="absolute bottom-4 left-4">
+//           <button className="hover:text-white flex items-center space-x-2 hover:bg-zinc-400 p-2 rounded">
+//             <Settings size={20} />
+//             <span>Settings</span>
+//           </button>
+//         </div>
+//       </motion.div>
+
+//       {/* Enhanced Chat Interface */}
+//       <div className="flex-1 flex flex-col">
+//         <AnimatePresence mode="wait">
+//           {isChatActive ? (
+//             <motion.div 
+//               key="chat"
+//               initial={{ opacity: 0, y: 20 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               exit={{ opacity: 0, y: -20 }}
+//               className="flex-1 flex flex-col"
+//             >
+//               <div className="flex-1 overflow-y-auto p-6 space-y-6">
+//                 {messages.map((message, index) => (
+//                   <motion.div
+//                     initial={{ opacity: 0, y: 20 }}
+//                     animate={{ opacity: 1, y: 0 }}
+//                     key={index}
+//                     className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+//                   >
+//                     <div className={`
+//                       max-w-xl p-4 rounded-2xl shadow-lg
+//                       ${message.sender === 'user' 
+//                         ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white' 
+//                         : 'bg-gray-800/50 backdrop-blur-sm text-gray-100'
+//                       }
+//                       ${message.isError ? 'border-red-500 border' : ''}
+//                     `}>
+//                       {message.text}
+//                       <div className="text-xs opacity-50 mt-2">
+//                         {new Date(message.timestamp).toLocaleTimeString()}
+//                       </div>
+//                     </div>
+//                   </motion.div>
+//                 ))}
+//                 {isTyping && (
+//                   <motion.div 
+//                     initial={{ opacity: 0 }}
+//                     animate={{ opacity: 1 }}
+//                     className="flex items-center space-x-2 text-gray-400"
+//                   >
+//                     <Loader className="animate-spin" size={16} />
+//                     <span>AI is typing...</span>
+//                   </motion.div>
+//                 )}
+//               </div>
+
+//               {/* Enhanced Input Form */}
+//               <motion.form 
+//                 initial={{ y: 20, opacity: 0 }}
+//                 animate={{ y: 0, opacity: 1 }}
+//                 onSubmit={handleSend} 
+//                 className="p-4 border-t border-gray-700 bg-gray-800/30 backdrop-blur-sm"
+//               >
+//                 <div className="max-w-4xl mx-auto flex space-x-4">
+//                   <input
+//                     type="text"
+//                     value={input}
+//                     onChange={(e) => setInput(e.target.value)}
+//                     className="flex-1 bg-gray-700/50 text-gray-100 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder-gray-400"
+//                     placeholder="Type your message..."
+//                   />
+//                   <motion.button 
+//                     whileHover={{ scale: 1.05 }}
+//                     whileTap={{ scale: 0.95 }}
+//                     type="submit" 
+//                     className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2"
+//                   >
+//                     <Send size={18} />
+//                     <span>Send</span>
+//                   </motion.button>
+//                 </div>
+//               </motion.form>
+//             </motion.div>
+//           ) : (
+//             <div className="flex-1 flex items-center justify-center">
+//               <div className="text-center">
+//                 <h1 className="text-4xl font-ab7 font-bold mb-4 text-white">Welcome to the Chat App</h1>
+//                 <p className="text-xl mb-8 text-white">Click "New chat" to start a conversation</p>
+//                 <button 
+//                   className="bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-3 rounded-lg text-lg"
+//                   onClick={startNewChat}
+//                 >
+//                   Start New Chat
+//                 </button>
+//               </div>
+//             </div>
+//           )}
+//         </AnimatePresence>
+//       </div>
+//     </motion.div>
+//   );
+// };
+
+// export default Chat;
+
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, PlusCircle, Settings, Loader, Send, Trash2, FileText } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
+import { Chart, registerables } from 'chart.js';
+
+// Register chart.js components
+Chart.register(...registerables);
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -13,6 +217,9 @@ const Chat = () => {
     { id: 1, title: 'Previous Chat 1', timestamp: '2h ago', fileCount: 5 },
     { id: 2, title: 'Previous Chat 2', timestamp: '1d ago', fileCount: 3 },
   ]);
+  const [graphData, setGraphData] = useState(null); // To store graph response
+  const chartRef = useRef(null); // Chart reference for rendering
+
   const navigate = useNavigate();
 
   const handleSend = async (e) => {
@@ -21,46 +228,96 @@ const Chat = () => {
       setMessages([...messages, { text: input, sender: 'user', timestamp: new Date() }]);
       setInput('');
       setIsTyping(true);
-      
+
       try {
-        const res = await axios.post("http://localhost:5000/api/process-query", { query: input });
+        const res = await axios.post('http://localhost:5000/api/process-query', { query: input });
         setIsTyping(false);
-        setMessages(prev => [...prev, { 
-          text: res.data.answer, 
-          sender: 'ai',
-          timestamp: new Date() 
-        }]);
+
+        if (res.data.graph) {
+          // If backend responds with graph data
+          setGraphData(res.data.graph); // Store graph data
+        } else {
+          // Otherwise, display as text
+          setMessages((prev) => [
+            ...prev,
+            { text: res.data.answer, sender: 'ai', timestamp: new Date() },
+          ]);
+          setGraphData(null); // Clear graph data
+        }
       } catch (error) {
         setIsTyping(false);
-        setMessages(prev => [...prev, { 
-          text: "Sorry, I encountered an error. Please try again.", 
-          sender: 'ai',
-          timestamp: new Date(),
-          isError: true 
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: 'Sorry, I encountered an error. Please try again.',
+            sender: 'ai',
+            timestamp: new Date(),
+            isError: true,
+          },
+        ]);
+        setGraphData(null);
       }
     }
   };
 
-  const startNewChat = async() => {
+  const startNewChat = async () => {
     setIsChatActive(true);
     setMessages([]);
-    await axios.get('http://localhost:5000/api/data-lake')
+    setGraphData(null);
+    await axios.get('http://localhost:5000/api/data-lake');
   };
 
+  // UseEffect to render graph when graphData changes
+  useEffect(() => {
+    if (graphData && chartRef.current) {
+      const ctx = chartRef.current.getContext('2d');
+
+      // Clear existing chart instance if any
+      if (chartRef.current.chartInstance) {
+        chartRef.current.chartInstance.destroy();
+      }
+
+      // Create new chart instance
+      chartRef.current.chartInstance = new Chart(ctx, {
+        type: 'bar', // Example chart type, change as needed
+        data: {
+          labels: graphData.labels,
+          datasets: [
+            {
+              label: 'Graph Response',
+              data: graphData.values,
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+            },
+          },
+        },
+      });
+    }
+  }, [graphData]);
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="flex h-screen bg-gradient-to-br from-gray-900 to-gray-800"
     >
-      {/* Enhanced Sidebar */}
-      <motion.div 
+      {/* Sidebar */}
+      <motion.div
         initial={{ x: -50 }}
         animate={{ x: 0 }}
         className="w-64 bg-gray-800/50 backdrop-blur-xl text-gray-100 p-4 border-r border-gray-700"
       >
-        <button 
+        <button
           className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 w-full p-3 rounded-lg mb-6 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
           onClick={startNewChat}
         >
@@ -80,15 +337,15 @@ const Chat = () => {
                 <p className="text-sm font-medium">{chat.title}</p>
                 <p className="text-xs text-gray-400">{chat.timestamp}</p>
               </div>
-              <Link 
+              <Link
                 to={`/files/${chat.id}`}
                 className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 bg-blue-500/20 rounded-md hover:bg-blue-500/30 text-blue-400 text-xs flex items-center gap-1"
               >
                 <FileText size={14} />
                 <span>{chat.fileCount} files</span>
               </Link>
-              <Trash2 
-                size={16} 
+              <Trash2
+                size={16}
                 className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-opacity"
               />
             </motion.div>
@@ -103,11 +360,11 @@ const Chat = () => {
         </div>
       </motion.div>
 
-      {/* Enhanced Chat Interface */}
+      {/* Chat Interface */}
       <div className="flex-1 flex flex-col">
         <AnimatePresence mode="wait">
           {isChatActive ? (
-            <motion.div 
+            <motion.div
               key="chat"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -120,16 +377,17 @@ const Chat = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     key={index}
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${
+                      message.sender === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
                   >
-                    <div className={`
-                      max-w-xl p-4 rounded-2xl shadow-lg
-                      ${message.sender === 'user' 
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white' 
-                        : 'bg-gray-800/50 backdrop-blur-sm text-gray-100'
-                      }
-                      ${message.isError ? 'border-red-500 border' : ''}
-                    `}>
+                    <div
+                      className={`max-w-xl p-4 rounded-2xl shadow-lg ${
+                        message.sender === 'user'
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                          : 'bg-gray-800/50 backdrop-blur-sm text-gray-100'
+                      } ${message.isError ? 'border-red-500 border' : ''}`}
+                    >
                       {message.text}
                       <div className="text-xs opacity-50 mt-2">
                         {new Date(message.timestamp).toLocaleTimeString()}
@@ -137,8 +395,13 @@ const Chat = () => {
                     </div>
                   </motion.div>
                 ))}
+                {graphData && (
+                  <div className="flex justify-center items-center mt-6">
+                    <canvas ref={chartRef} className="max-w-3xl w-full"></canvas>
+                  </div>
+                )}
                 {isTyping && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="flex items-center space-x-2 text-gray-400"
@@ -149,11 +412,11 @@ const Chat = () => {
                 )}
               </div>
 
-              {/* Enhanced Input Form */}
-              <motion.form 
+              {/* Input Form */}
+              <motion.form
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                onSubmit={handleSend} 
+                onSubmit={handleSend}
                 className="p-4 border-t border-gray-700 bg-gray-800/30 backdrop-blur-sm"
               >
                 <div className="max-w-4xl mx-auto flex space-x-4">
@@ -164,10 +427,10 @@ const Chat = () => {
                     className="flex-1 bg-gray-700/50 text-gray-100 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder-gray-400"
                     placeholder="Type your message..."
                   />
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    type="submit" 
+                    type="submit"
                     className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2"
                   >
                     <Send size={18} />
@@ -181,7 +444,7 @@ const Chat = () => {
               <div className="text-center">
                 <h1 className="text-4xl font-ab7 font-bold mb-4 text-white">Welcome to the Chat App</h1>
                 <p className="text-xl mb-8 text-white">Click "New chat" to start a conversation</p>
-                <button 
+                <button
                   className="bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-3 rounded-lg text-lg"
                   onClick={startNewChat}
                 >

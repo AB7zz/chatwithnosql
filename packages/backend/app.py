@@ -246,7 +246,7 @@ def collect_data():
             'crm_data': fetch_crm_data(),
             'pdfs': extract_text_from_pdf(),
             'images': extract_text_from_images(),
-            'audio': extract_text_from_audio(),
+            # 'audio': extract_text_from_audio(),
             # 'video': extract_text_from_video()
         }
         return data
@@ -464,7 +464,64 @@ Answer:"""
     response = gemini_model.generate_content(prompt)
     text = response.candidates[0].content.parts[0].text
 
-    return {"answer": text}
+  # Example logic: Determine when to return a graph response
+    if 'graph' in query.lower():
+            # Assuming you have a function to generate graph data based on the answer text
+            graph_data = generate_graph_data(text)
+            print(f"Graph resp: {graph_data}")
+            return {"graph": graph_data}
+            
+        
+    else:
+            print(f"Ans resp: {text}")
+            return {"answer": text}  
+            
+
+
+def generate_graph_data(answer_text):
+    """
+    Simplify graph generation from textual data.
+    
+    Args:
+        answer_text (str): Input text containing nodes and edges.
+        
+    Returns:
+        dict: Graph data with nodes and edges.
+    """
+    # Split the text into sentences or phrases
+    sentences = answer_text.split(".")
+    
+    # Initialize nodes and edges
+    nodes = set()
+    edges = []
+
+    for sentence in sentences:
+        # Split sentence into words (simplistic node extraction)
+        words = sentence.strip().split()
+        
+        # Use the first two words as nodes and consider the relationship
+        if len(words) >= 2:
+            node_a, node_b = words[0], words[1]
+            nodes.add(node_a)
+            nodes.add(node_b)
+            edges.append((node_a, node_b))
+    
+    # Return graph data
+    graph_data = {
+        "nodes": list(nodes),
+        "edges": edges
+    }
+    return graph_data
+
+# Example usage
+text = "NodeA connects to NodeB. NodeB relates to NodeC. NodeC influences NodeD."
+graph = generate_graph_data(text)
+print(graph)
+
+
+       
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
