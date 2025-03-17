@@ -119,7 +119,7 @@ const Chat = () => {
   const startNewChat = async () => {
     setIsChatActive(true);
     setMessages([]);
-    await axios.get('http://localhost:5000/api/data-lake');
+    await axios.post('http://localhost:5000/api/data-lake', { company_id: 'makeaton' });
   };
 
   return (
@@ -190,7 +190,7 @@ const Chat = () => {
             >
               <div 
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto p-6 space-y-6"
+                className="flex-1 overflow-y-auto p-6 space-y-6 mt-[100px]"
               >
                 {messages.map((message, index) => (
                   <motion.div
