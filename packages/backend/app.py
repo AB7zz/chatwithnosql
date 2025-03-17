@@ -20,6 +20,15 @@ import glob
 from pydub import AudioSegment
 import speech_recognition as sr
 from datetime import datetime
+import firebase_admin
+from firebase_admin import firestore, credentials
+
+# Initialize Firestore
+
+cred = credentials.Certificate('serviceAccountKey.json')
+firebase_admin.initialize_app(cred)
+
+db = firestore.client()
 
 # Load environment variables and initialize NLTK
 load_dotenv()
@@ -327,6 +336,13 @@ def batch_embed_chunks_with_labels(text_data):
         
         for future in as_completed(futures):
             chunk = futures[future]
+            # Create a new document reference first
+            doc_ref = db.collection('texts').document()
+            # Use the reference to store the text
+            doc_ref.set({
+                'text': chunk['text'],
+            })
+
             try:
                 embeddings = future.result()
                 # Store essential metadata with text text
@@ -334,7 +350,7 @@ def batch_embed_chunks_with_labels(text_data):
                     "sources": ','.join(set(chunk['sources'])),
                     "labels": ','.join(set(str(m.get('label', 'unknown')) for m in chunk['metadata'] if m.get('label'))),
                     "timestamp": datetime.now().isoformat(),
-                    "text": chunk['text']
+                    "text_id": doc_ref.id  # Use the same document ID
                 }
                 
                 embeddings_list.append({
@@ -423,7 +439,7 @@ def calculate_similarity(query, query_embedding, company_id):
             metadata = vector_data['metadata']
             # Include text text in context
             context = {
-                'text': metadata.get('text', ''),
+                'text_id': metadata.get('text_id', ''),
                 'source': metadata.get('sources', 'unknown'),
                 'label': metadata.get('labels', 'unknown')
             }
@@ -436,19 +452,25 @@ def calculate_similarity(query, query_embedding, company_id):
 
     similarities = cosine_similarity(query_embedding, text_embeddings)[0]
     top_indices = np.argsort(similarities)[-5:][::-1]
-
+    print(metadatas[top_indices[0]])
     results = [
         {
             'index': int(idx),
             'id': sentences[idx],
             'similarity': float(similarities[idx]),
-            'context': metadatas[idx]["text"]
+            'text_id': metadatas[idx]["text_id"]
         }
         for idx in top_indices
     ]
     
     # For Gemini, we'll provide structured contexts
-    contexts = [result["context"] for result in results]
+    text_ids = [result["text_id"] for result in results]
+    print(text_ids)
+
+    contexts = []   
+    for text_id in text_ids:
+        text = db.collection('texts').document(text_id).get().to_dict().get('text', '')
+        contexts.append(text)
     
     # Call Gemini with structured contexts
     gemini_response = process_gemini(query, contexts)
