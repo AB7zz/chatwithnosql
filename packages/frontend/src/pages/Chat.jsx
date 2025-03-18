@@ -87,7 +87,7 @@ const Chat = () => {
       setIsTyping(true);
 
       try {
-        const res = await axios.post('http://localhost:5000/api/process-query', { query: input });
+        const res = await axios.post('http://localhost:5000/api/process-query', { company_id: "makeaton", query: input });
         setIsTyping(false);
 
         if (res.data.type === 'graph') {
