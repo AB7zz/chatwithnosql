@@ -30,9 +30,8 @@ firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
-# Load environment variables and initialize NLTK
+# Load environment variables
 load_dotenv()
-nltk.download('punkt')
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -66,17 +65,39 @@ def fetch_email_data():
         with open('data.csv', 'r', encoding='ISO-8859-1') as file:
             csv_reader = csv.reader(file)
             next(csv_reader)  # Skip header row
-            for row in csv_reader:
+            for i, row in enumerate(csv_reader):
+                if i >= 100:  # Stop after 100 rows
+                    break
                 if not row or len(row) < 2:  # Skip empty rows
                     continue
                 csv_data.append({
                     'label': row[0].strip().lower(),  # spam/nonspam
                     'message': row[1].strip()  # message content
                 })
-            print(f"Processed {len(csv_data)} email entries")
+            print(f"Processed {len(csv_data)} email entries (limited to first 100)")
     except Exception as e:
         print(f"Error reading CSV: {e}")
     return csv_data
+
+def clean_text(text):
+    """Clean extracted text by removing excessive whitespace and newlines."""
+    # Replace multiple newlines and spaces with a single space
+    text = ' '.join(text.split())
+    
+    # Fix common PDF extraction artifacts
+    text = text.replace(' ,', ',')
+    text = text.replace(' .', '.')
+    text = text.replace(' :', ':')
+    text = text.replace('●', '\n•')  # Convert bullets to cleaner format
+    
+    # Fix spacing after punctuation
+    for punct in ['.', ',', '!', '?', ':', ';']:
+        text = text.replace(f'{punct} ', f'{punct} ')
+    
+    # Remove any remaining control characters
+    text = ''.join(char for char in text if char.isprintable() or char in ['\n'])
+    
+    return text.strip()
 
 def extract_text_from_pdf(pdf_directory='./data/pdf/'):
     pdf_texts = []
@@ -86,16 +107,26 @@ def extract_text_from_pdf(pdf_directory='./data/pdf/'):
         try:
             with open(pdf_file, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
-                text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text()
+                pages_text = []
                 
-                if text.strip():  # Only add if there's actual text content
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        # Clean each page individually
+                        cleaned_text = clean_text(page_text)
+                        if cleaned_text:  # Only add non-empty pages
+                            pages_text.append(cleaned_text)
+                
+                if pages_text:  # Only process if we have valid text
+                    # Join pages with proper spacing
+                    final_text = '\n\n'.join(pages_text)
+                    
                     pdf_texts.append({
                         'type': 'pdf',
                         'source': os.path.basename(pdf_file),
-                        'content': text
+                        'content': final_text
                     })
+                    print(f"Successfully processed {os.path.basename(pdf_file)}")
         except Exception as e:
             print(f"Error processing PDF {pdf_file}: {e}")
     
@@ -216,7 +247,7 @@ def collect_data():
         data = {}
         # Collect and validate data from each source
         sources = {
-            # 'emails': fetch_email_data,
+            'emails': fetch_email_data,
             'pdfs': extract_text_from_pdf,
             'images': extract_text_from_images,
             'audio': extract_text_from_audio,
@@ -261,11 +292,11 @@ def extract_text_from_data(data):
     if 'emails' in data:
         for entry in data['emails']:
             add_text(
-                text=entry.get('message', ''),
+                text=entry['message'],
                 source='email',
                 metadata={
-                    'label': entry.get('label'),  # spam/nonspam
-                    'timestamp': datetime.now().isoformat()  # current time since data doesn't have timestamps
+                    'label': entry['label'],  # spam/nonspam
+                    'timestamp': datetime.now().isoformat()
                 }
             )
 
@@ -276,8 +307,8 @@ def extract_text_from_data(data):
                 text=entry.get('content', ''),
                 source='image',
                 metadata={
-                    'filename': entry.get('filename'),
-                    'timestamp': entry.get('timestamp')
+                    'filename': entry.get('source'),
+                    'timestamp': datetime.now().isoformat()
                 }
             )
 
@@ -289,68 +320,131 @@ def extract_text_from_data(data):
                     text=entry.get('content', ''),
                     source=source_type[:-1],  # Remove 's' to get singular form
                     metadata={
-                        'filename': entry.get('filename'),
-                        'timestamp': entry.get('timestamp')
+                        'filename': entry.get('source'),
+                        'timestamp': datetime.now().isoformat()
                     }
                 )
 
     return structured_texts
 
-def chunk_text(texts, chunk_size=2):
-    """Split a list of text entries into chunks while preserving metadata"""
-    for i in range(0, len(texts), chunk_size):
-        chunk_entries = texts[i:i+chunk_size]
+def chunk_text(texts, max_chunk_size=512, overlap=50):
+    """
+    Split text entries into smaller chunks while preserving metadata.
+    Args:
+        texts: List of dictionaries containing text, source, and metadata
+        max_chunk_size: Maximum number of characters per chunk
+        overlap: Number of characters to overlap between chunks for context preservation
+    """
+    chunked_texts = []
+    
+    for entry in texts:
+        text = entry['text']
+        # Skip empty texts
+        if not text.strip():
+            continue
+            
+        # For email data, keep chunks smaller to maintain label accuracy
+        current_max_size = max_chunk_size
+        if entry['source'] == 'email':
+            current_max_size = 256  # Smaller chunks for emails to maintain label accuracy
+            
+        # Split text into words
+        words = text.split()
+        current_chunk = []
+        current_length = 0
         
-        yield {
-            'text': ' '.join(entry['text'] for entry in chunk_entries),
-            'sources': [entry['source'] for entry in chunk_entries],
-            'metadata': [entry['metadata'] for entry in chunk_entries]
-        }
+        for word in words:
+            word_length = len(word) + 1  # +1 for space
+            
+            # If adding this word would exceed max_chunk_size, save current chunk and start new one
+            if current_length + word_length > current_max_size and current_chunk:
+                # Join words and add metadata
+                chunk_text = ' '.join(current_chunk)
+                chunked_texts.append({
+                    'text': chunk_text,
+                    'source': entry['source'],
+                    'metadata': entry['metadata'].copy()  # Make a copy to avoid reference issues
+                })
+                
+                # Start new chunk with overlap by keeping some words for context
+                overlap_words = current_chunk[-3:]  # Keep last 3 words for context
+                current_chunk = overlap_words if overlap_words else []
+                current_length = sum(len(w) + 1 for w in current_chunk)
+            
+            current_chunk.append(word)
+            current_length += word_length
+        
+        # Add remaining chunk if it exists
+        if current_chunk:
+            chunk_text = ' '.join(current_chunk)
+            chunked_texts.append({
+                'text': chunk_text,
+                'source': entry['source'],
+                'metadata': entry['metadata'].copy()  # Make a copy to avoid reference issues
+            })
+    
+    return chunked_texts
 
-def batch_embed_chunks_with_labels(text_data):
+def batch_embed_chunks_with_labels(text_data, company_id):
     """
     Create embeddings for text chunks while preserving source and metadata information.
     Args:
         text_data: List of dictionaries containing text, source, and metadata
+        company_id: ID of the company
     Returns:
         List of dictionaries formatted for Pinecone with id, values, and metadata
     """
-    print(text_data)
     embeddings_list = []
     id_counter = 1
     
+    # First chunk the texts into smaller pieces
+    chunked_texts = chunk_text(text_data)
+    
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {}
-        for chunk in chunk_text(text_data):
+        for chunk in chunked_texts:
             # Add source and label information to the text
-            sources_str = ', '.join(set(chunk['sources']))
-            labels = [m.get('label', 'unknown') for m in chunk['metadata'] if m.get('label')]
-            labels_str = ', '.join(set(labels)) if labels else ''
+            sources_str = chunk['source']
             
-            context = f"Sources: {sources_str}"
-            if labels_str:
-                context += f", Labels: {labels_str}"
+            # Special handling for email data with spam/nonspam labels
+            if sources_str == 'email':
+                label = chunk['metadata'].get('label', 'unknown')
+                context = f"Source: {sources_str}, Classification: {label}"
+            else:
+                context = f"Source: {sources_str}"
             
+            # Add context to the chunk for better semantic understanding
             labeled_chunk = f"{chunk['text']} ({context})"
             futures[executor.submit(model.encode, labeled_chunk)] = chunk
         
+        batch_size = 100  # Process Firestore operations in batches
+        current_batch = []
+        
         for future in as_completed(futures):
             chunk = futures[future]
-            # Create a new document reference first
-            doc_ref = db.collection('texts').document()
-            # Use the reference to store the text
-            doc_ref.set({
-                'text': chunk['text'],
-            })
-
             try:
                 embeddings = future.result()
-                # Store essential metadata with text text
+                
+                # Create a new document reference
+                doc_ref = db.collection(f'company-{company_id}-texts').document()
+                
+                # Prepare document data - preserve original text without context
+                doc_data = {
+                    'text': chunk['text'],
+                    'source': chunk['source'],
+                    'metadata': chunk['metadata'],
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+                # Add to current batch
+                current_batch.append((doc_ref, doc_data))
+                
+                # Store essential metadata with embedding
                 metadata = {
-                    "sources": ','.join(set(chunk['sources'])),
-                    "labels": ','.join(set(str(m.get('label', 'unknown')) for m in chunk['metadata'] if m.get('label'))),
-                    "timestamp": datetime.now().isoformat(),
-                    "text_id": doc_ref.id  # Use the same document ID
+                    "sources": chunk['source'],
+                    "labels": str(chunk['metadata'].get('label', 'unknown')),
+                    "timestamp": doc_data['timestamp'],
+                    "text_id": doc_ref.id
                 }
                 
                 embeddings_list.append({
@@ -359,10 +453,46 @@ def batch_embed_chunks_with_labels(text_data):
                     "values": embeddings.tolist()
                 })
                 id_counter += 1
+                
+                # If batch is full, commit to Firestore
+                if len(current_batch) >= batch_size:
+                    batch = db.batch()
+                    for ref, data in current_batch:
+                        batch.set(ref, data)
+                    batch.commit()
+                    current_batch = []
+                    
             except Exception as e:
                 print(f"Error processing chunk: {e}")
+        
+        # Commit any remaining documents in the final batch
+        if current_batch:
+            batch = db.batch()
+            for ref, data in current_batch:
+                batch.set(ref, data)
+            batch.commit()
     
     return embeddings_list
+
+def format_document_context(doc_data):
+    """Format document data into a structured context string"""
+    text = doc_data.get('text', '')
+    metadata = doc_data.get('metadata', {})
+    source = doc_data.get('source', 'unknown')
+    timestamp = doc_data.get('timestamp', '')
+    
+    context = f"Content: {text}\n"
+    context += f"Source: {source}\n"
+    context += f"Time: {timestamp}\n"
+    
+    # Add label for email sources
+    if source == 'email' and 'label' in metadata:
+        context += f"Classification: {metadata['label']}\n"
+    # Add filename for other sources
+    elif 'filename' in metadata:
+        context += f"File: {metadata['filename']}\n"
+    
+    return context.strip()
 
 @app.route('/api/data-lake', methods=['POST'])
 def data_lake_embeddings():
@@ -381,7 +511,7 @@ def data_lake_embeddings():
         text_data = extract_text_from_data(data)
         
         # Process and embed the text data
-        embeddings_list = batch_embed_chunks_with_labels(text_data)
+        embeddings_list = batch_embed_chunks_with_labels(text_data, company_id)
         
         # Send the embeddings to Pinecone using company-specific namespace
         if embeddings_list:
@@ -451,7 +581,7 @@ def calculate_similarity(query, query_embedding, company_id):
         query_embedding = query_embedding.reshape(1, -1)
 
     similarities = cosine_similarity(query_embedding, text_embeddings)[0]
-    top_indices = np.argsort(similarities)[-5:][::-1]
+    top_indices = np.argsort(similarities)[-15:][::-1]
     print(metadatas[top_indices[0]])
     results = [
         {
@@ -465,12 +595,12 @@ def calculate_similarity(query, query_embedding, company_id):
     
     # For Gemini, we'll provide structured contexts
     text_ids = [result["text_id"] for result in results]
-    print(text_ids)
 
     contexts = []   
     for text_id in text_ids:
-        text = db.collection('texts').document(text_id).get().to_dict().get('text', '')
-        contexts.append(text)
+        doc = db.collection(f"company-{company_id}-texts").document(text_id).get().to_dict()
+        if doc:
+            contexts.append(format_document_context(doc))
     
     # Call Gemini with structured contexts
     gemini_response = process_gemini(query, contexts)
@@ -478,12 +608,12 @@ def calculate_similarity(query, query_embedding, company_id):
     return gemini_response
 
 def process_gemini(query, contexts):
-
-    print(contexts)
     
     if 'graph' in query.lower() or 'chart' in query.lower():
         # Modified prompt for graph data
-        prompt = f"""Given the following context and query, provide data that can be visualized as a chart. Return the response in this exact JSON format:
+        prompt = f"""Given the following structured contexts and query, provide data that can be visualized as a chart. Each context contains Content, Source, Time, and optional Classification or File information.
+
+Return the response in this exact JSON format:
 {{
     "type": "bar",  # Specify one of: bar, line, bubble, doughnut, polar, radar, scatter
     "data": {{
@@ -498,16 +628,16 @@ def process_gemini(query, contexts):
     }}
 }}
 
-Context:
+Contexts:
 {' '.join(contexts)}
 
 Query: {query}
 
 Generate appropriate chart data based on the context and query:"""
     else:
-        prompt = f"""Given the following context and query, provide a relevant and concise answer.
+        prompt = f"""Given the following structured contexts and query, provide a relevant and concise answer. Each context contains Content, Source, Time, and optional Classification or File information.
 
-Context:
+Contexts:
 {' '.join(contexts)}
 
 Query: {query}
