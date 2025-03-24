@@ -22,9 +22,9 @@ import speech_recognition as sr
 from datetime import datetime
 import firebase_admin
 from firebase_admin import firestore, credentials
+from collections import defaultdict
 
 # Initialize Firestore
-
 cred = credentials.Certificate('serviceAccountKey.json')
 firebase_admin.initialize_app(cred)
 
@@ -57,6 +57,9 @@ reader = easyocr.Reader(['en'])
 
 # Initialize Whisper model
 whisper_model = whisper.load_model("base")
+
+# Store recent queries by company ID
+company_queries = defaultdict(list)
 
 # Helper Functions for Data Lake
 def fetch_email_data():
@@ -560,23 +563,35 @@ def process_query():
             return jsonify({"error": "No query provided"}), 400
 
         # Get company ID from body
-        company_id = data['company_id']
+        company_id = data.get('company_id')
         if not company_id:
             return jsonify({"error": "Company ID is required"}), 400
 
         query = data['query']
         
+        try:
+            # Store this query in the company's history
+            company_queries[company_id].append(query)
+            # Keep only the most recent 10 queries
+            if len(company_queries[company_id]) > 10:
+                company_queries[company_id].pop(0)
+            recent_queries = company_queries[company_id]
+        except Exception as e:
+            print(f"Error handling query history: {e}")
+            recent_queries = None  # Fallback to no history
+        
         # Generate embedding for the query
         query_embedding = model.encode(query)
         
-        # Send to calculate_similarity internally
-        similarity_response = calculate_similarity(query, query_embedding.tolist(), company_id)
+        # Send to calculate_similarity internally with query history
+        similarity_response = calculate_similarity(query, query_embedding.tolist(), company_id, recent_queries)
         
         return jsonify(similarity_response)
     except Exception as e:
+        print(f"Process query error: {e}")
         return jsonify({"error": str(e)}), 500
 
-def calculate_similarity(query, query_embedding, company_id):
+def calculate_similarity(query, query_embedding, company_id, recent_queries=None):
     query_embedding = np.array(query_embedding)
     namespace = f"company-{company_id}"
     vector_ids = index.list(namespace=namespace)
@@ -628,16 +643,23 @@ def calculate_similarity(query, query_embedding, company_id):
         if doc:
             contexts.append(format_document_context(doc))
     
-    # Call Gemini with structured contexts
-    gemini_response = process_gemini(query, contexts)
+    # Call Gemini with structured contexts and query history
+    gemini_response = process_gemini(query, contexts, recent_queries)
     
     return gemini_response
 
-def process_gemini(query, contexts):
+def process_gemini(query, contexts, recent_queries=None):
+    # Create a context header that summarizes previous interactions
+    conversation_context = ""
+    if recent_queries and len(recent_queries) > 1:  # Only add context if there are previous queries
+        conversation_context = "Previous queries:\n"
+        for prev_query in recent_queries[-3:]:  # Only use the last 3 queries
+            conversation_context += f"- {prev_query}\n"
+        conversation_context += "\n"
     
     if 'graph' in query.lower() or 'chart' in query.lower():
         # Modified prompt for graph data
-        prompt = f"""Given the following structured contexts and query, provide data that can be visualized as a chart. Each context contains Content, Source, Time, and optional Classification or File information.
+        prompt = f"""{conversation_context}Given the following structured contexts and query, provide data that can be visualized as a chart. Each context contains Content, Source, Time, and optional Classification or File information.
 
 Return the response in this exact JSON format:
 {{
@@ -661,7 +683,14 @@ Query: {query}
 
 Generate appropriate chart data based on the context and query:"""
     else:
-        prompt = f"""Given the following structured contexts and query, provide a relevant and concise answer. Each context contains Content, Source, Time, and optional Classification or File information.
+        prompt = f"""{conversation_context}Given the following structured contexts and query, provide a relevant and concise answer. Each context contains Content, Source, Time, and optional Classification or File information.
+
+When responding:
+1. Consider the conversation history and previous queries above to maintain context
+2. Relate your answer to earlier questions if relevant
+3. If the current query seems to reference or follow up on a previous topic, acknowledge that connection
+4. Provide a clear and concise response that directly addresses the query
+5. Provide answers in bullet points or short paragraphs for readability
 
 Contexts:
 {' '.join(contexts)}
