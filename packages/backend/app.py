@@ -502,6 +502,32 @@ def data_lake_embeddings():
         if not company_id:
             return jsonify({"error": "Company ID is required"}), 400
 
+        # Safely delete existing documents if any exist
+        collection_ref = db.collection(f'company-{company_id}-texts')
+        try:
+            batch_size = 100
+            docs = collection_ref.limit(batch_size).stream()
+            deleted = 0
+
+            # Only attempt deletion if documents exist
+            while docs:
+                batch = db.batch()
+                doc_list = list(docs)  # Convert to list to check if empty
+                if not doc_list:
+                    break
+                
+                for doc in doc_list:
+                    batch.delete(doc.reference)
+                    print(f"Deleted document: {doc.id}")
+                    deleted += 1
+                batch.commit()
+                docs = collection_ref.limit(batch_size).stream()
+            
+            print(f"Successfully deleted {deleted} documents")
+        except Exception as e:
+            print(f"Error during deletion: {e}")
+            # Continue with the rest of the process even if deletion fails
+
         # Fetch data from the data lake API
         data = collect_data()
         if data is None:
