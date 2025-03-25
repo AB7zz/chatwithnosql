@@ -39,6 +39,8 @@ const Chat = () => {
   const chatContainerRef = useRef(null);
   const [currentRoomId, setCurrentRoomId] = useState(null);
   const [chatRooms, setChatRooms] = useState([]);
+  const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [newRoomName, setNewRoomName] = useState("");
 
   // const navigate = useNavigate();
 
@@ -216,16 +218,21 @@ const Chat = () => {
 
   const startNewChat = async () => {
     try {
-      // Create new chat room
-      const newRoomRef = await addDoc(collection(db, "chatrooms"), {
-        title: `Chat ${new Date().toLocaleString()}`,
+      if (!newRoomName.trim()) return;
+
+      // Create new chat room with custom ID
+      const newRoomRef = doc(db, "chatrooms", newRoomName);
+      await setDoc(newRoomRef, {
+        title: newRoomName,
         timestamp: new Date(),
         lastMessage: null,
       });
 
-      setCurrentRoomId(newRoomRef.id);
+      setCurrentRoomId(newRoomName);
       setIsChatActive(true);
       setMessages([]);
+      setIsNewChatModalOpen(false);
+      setNewRoomName("");
 
       // Refresh chat rooms list
       fetchChatRooms();
@@ -249,11 +256,11 @@ const Chat = () => {
       <motion.div
         initial={{ x: -50 }}
         animate={{ x: 0 }}
-        className="pt-[40px] w-64 bg-gray-800/50 backdrop-blur-xl text-gray-100 p-4 border-r border-gray-700"
+        className="pt-[100px] w-64 bg-gray-800/50 backdrop-blur-xl text-gray-100 p-4 border-r border-gray-700"
       >
         <button
           className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 w-full p-3 rounded-lg mb-6 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
-          onClick={startNewChat}
+          onClick={() => setIsNewChatModalOpen(true)}
         >
           <PlusCircle size={20} />
           <span>New chat</span>
@@ -412,7 +419,7 @@ const Chat = () => {
                 </p>
                 <button
                   className="bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-3 rounded-lg text-lg"
-                  onClick={startNewChat}
+                  onClick={() => setIsNewChatModalOpen(true)}
                 >
                   Start New Chat
                 </button>
@@ -421,6 +428,45 @@ const Chat = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* New Chat Modal */}
+      {isNewChatModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-gray-800 rounded-xl p-6 w-[90%] max-w-md border border-gray-700"
+          >
+            <h2 className="text-xl font-semibold text-gray-100 mb-4">Create New Chat</h2>
+            <input
+              type="text"
+              value={newRoomName}
+              onChange={(e) => setNewRoomName(e.target.value)}
+              placeholder="Enter chat room name"
+              className="w-full bg-gray-700 text-gray-100 rounded-lg p-3 mb-4 border border-gray-600 focus:border-blue-500 focus:outline-none"
+              onKeyDown={(e) => e.key === 'Enter' && startNewChat()}
+              autoFocus
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={startNewChat}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
+              >
+                Create
+              </button>
+              <button
+                onClick={() => {
+                  setIsNewChatModalOpen(false);
+                  setNewRoomName("");
+                }}
+                className="flex-1 bg-gray-700 text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };
