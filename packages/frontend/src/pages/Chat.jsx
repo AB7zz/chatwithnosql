@@ -249,7 +249,7 @@ const Chat = () => {
       <motion.div
         initial={{ x: -50 }}
         animate={{ x: 0 }}
-        className="w-64 bg-gray-800/50 backdrop-blur-xl text-gray-100 p-4 border-r border-gray-700"
+        className="pt-[40px] w-64 bg-gray-800/50 backdrop-blur-xl text-gray-100 p-4 border-r border-gray-700"
       >
         <button
           className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 w-full p-3 rounded-lg mb-6 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
