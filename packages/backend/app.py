@@ -511,7 +511,6 @@ def data_lake_embeddings():
         company_id = request.form.get('company_id')
         if not company_id:
             return jsonify({"error": "Company ID is required"}), 400
-
         # Handle the credentials file
         if 'credentials' not in request.files:
             return jsonify({"error": "No credentials file provided"}), 400
@@ -519,6 +518,22 @@ def data_lake_embeddings():
         credentials_file = request.files['credentials']
         if credentials_file.filename == '':
             return jsonify({"error": "No selected file"}), 400
+        # Check if documents already exist in collection
+        collection_ref = db.collection(f'company-{company_id}-texts')
+        try:
+            docs = collection_ref.limit(1).stream()
+            # If any document exists, return early
+            if list(docs):
+                print("Documents already exist in collection")
+                return jsonify({"message": "Already embedded"}), 200
+        except Exception as e:
+            print(f"Error checking collection: {e}")
+            # Continue with the process if check fails
+
+        # Fetch data from the data lake API
+        data = collect_data()
+        if data is None:
+            return jsonify({"error": "Failed to collect data"}), 500
 
         # Save the credentials file temporarily
         temp_cred_path = f'temp_cred_{company_id}.json'
