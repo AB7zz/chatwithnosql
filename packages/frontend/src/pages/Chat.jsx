@@ -217,6 +217,8 @@ const Chat = () => {
   };
 
   const startNewChat = async () => {
+    setIsChatActive(true);
+    setMessages([]);
     try {
       if (!newRoomName.trim()) return;
 

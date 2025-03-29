@@ -3,6 +3,7 @@ import { auth, db } from '../firebase/config.js';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,7 +16,9 @@ const Login = () => {
     address: '',
     phone: '',
     industry: '',
-    size: ''
+    size: '',
+    dataLakeSource: '',
+    credentialsFile: null
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -26,6 +29,16 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCompanyDetails(prev => ({
+        ...prev,
+        credentialsFile: file
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -46,20 +59,42 @@ const Login = () => {
             setError('Passwords do not match');
             return;
           }
-          // Move to company details step
           setCurrentStep(2);
         } else {
-          // Create user and save company details
-          console.log(email, password, companyDetails,"sdfgbdfsadgsgsfadg");
-          console.log(auth,"sdfgbdfsadgsgsfadg");
+          // Create user
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           
-          // Save company details to Firestore
-          await setDoc(doc(db, 'companies', userCredential.user.uid), {
-            ...companyDetails,
+          // Save company details to Firestore (without credentials file)
+          const companyData = {
+            name: companyDetails.name,
+            address: companyDetails.address,
+            phone: companyDetails.phone,
+            industry: companyDetails.industry,
+            size: companyDetails.size,
             userId: userCredential.user.uid,
             createdAt: new Date().toISOString()
-          });
+          };
+          
+          await setDoc(doc(db, 'companies', userCredential.user.uid), companyData);
+
+          // If Firebase is selected and credentials file exists, send to backend
+          if (companyDetails.dataLakeSource === 'firebase' && companyDetails.credentialsFile) {
+            const formData = new FormData();
+            formData.append('credentials', companyDetails.credentialsFile);
+            formData.append('company_id', userCredential.user.uid);
+
+            try {
+              await axios.post('http://localhost:5000/api/data-lake', formData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                },
+              });
+            } catch (error) {
+              console.error('Error sending credentials:', error);
+              // Show error but continue with navigation
+              setError('Data lake setup failed, but account was created successfully');
+            }
+          }
           
           navigate('/chat');
         }
@@ -178,6 +213,52 @@ const Login = () => {
             <option value="500+">500+ employees</option>
           </select>
         </div>
+
+        {/* Add Data Lake Source Selection */}
+        <div>
+          <label htmlFor="dataLakeSource" className="block text-sm font-medium text-gray-700">
+            Data Lake Source
+          </label>
+          <select
+            id="dataLakeSource"
+            name="dataLakeSource"
+            required
+            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            value={companyDetails.dataLakeSource}
+            onChange={handleCompanyDetailsChange}
+          >
+            <option value="">Select Data Lake Source</option>
+            <option value="firebase">Firebase Storage</option>
+            <option value="aws" disabled>AWS S3 (Coming Soon)</option>
+            <option value="azure" disabled>Azure Blob Storage (Coming Soon)</option>
+          </select>
+        </div>
+
+        {/* Show file upload only if Firebase is selected */}
+        {companyDetails.dataLakeSource === 'firebase' && (
+          <div>
+            <label htmlFor="credentials" className="block text-sm font-medium text-gray-700">
+              Firebase Credentials JSON
+            </label>
+            <input
+              id="credentials"
+              name="credentials"
+              type="file"
+              accept=".json"
+              required
+              onChange={handleFileChange}
+              className="mt-1 block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-md file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-50 file:text-indigo-700
+                hover:file:bg-indigo-100"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Please upload your Firebase service account credentials JSON file
+            </p>
+          </div>
+        )}
 
         <div className="flex space-x-4">
           <button
