@@ -119,7 +119,6 @@ const Chat = () => {
   const startNewChat = async () => {
     setIsChatActive(true);
     setMessages([]);
-    await axios.post('http://localhost:5000/api/data-lake', { company_id: 'makeaton' });
   };
 
   return (

@@ -23,12 +23,21 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import firestore, credentials
 from collections import defaultdict
+from firebase_admin import storage
+import json
+
+
+# Initialize Firebase Admin SDK with both Firestore and Storage
+cred = credentials.Certificate('serviceAccountKey.json')
+firebase_admin.initialize_app(cred, {
+    'storageBucket': 'chatwithnosql.firebasestorage.app'  # Your bucket name
+})
 
 # Initialize Firestore
-cred = credentials.Certificate('serviceAccountKey.json')
-firebase_admin.initialize_app(cred)
-
 db = firestore.client()
+
+# Initialize Firebase Storage
+bucket = storage.bucket()
 
 # Load environment variables
 load_dotenv()
@@ -61,29 +70,46 @@ whisper_model = whisper.load_model("base")
 # Store recent queries by company ID
 company_queries = defaultdict(list)
 
-# Helper Functions for Data Lake
-def fetch_email_data():
-    csv_data = []
-    try:
-        with open('data.csv', 'r', encoding='ISO-8859-1') as file:
-            csv_reader = csv.reader(file)
-            next(csv_reader)  # Skip header row
-            for i, row in enumerate(csv_reader):
-                if i >= 100:  # Stop after 100 rows
-                    break
-                if not row or len(row) < 2:  # Skip empty rows
-                    continue
-                csv_data.append({
-                    'label': row[0].strip().lower(),  # spam/nonspam
-                    'message': row[1].strip()  # message content
-                })
-            print(f"Processed {len(csv_data)} email entries (limited to first 100)")
-    except Exception as e:
-        print(f"Error reading CSV: {e}")
-    return csv_data
+# At the top of the file with other global variables
+global_bucket = None  # Initialize global bucket variable
+
+def safe_filename(filename):
+    """Convert filename to a safe version without spaces and special characters"""
+    return "".join(c for c in filename if c.isalnum() or c in '._-')
+
+def ensure_temp_dir():
+    """Ensure temporary directory exists"""
+    temp_dir = '/tmp/firebase_files'
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir
+
+def get_files_with_bucket(bucket_instance):
+    files_by_type = {
+        'pdf': [],
+        'image': [],
+        'audio': [],
+        'video': []
+    }
+    
+    blobs = bucket_instance.list_blobs()
+    for blob in blobs:
+        filename = blob.name.lower()
+        if filename.endswith(('.pdf')):
+            files_by_type['pdf'].append(blob)
+        elif filename.endswith(('.jpg', '.jpeg', '.png')):
+            files_by_type['image'].append(blob)
+        elif filename.endswith(('.mp3', '.wav')):
+            files_by_type['audio'].append(blob)
+        elif filename.endswith(('.mp4')):
+            files_by_type['video'].append(blob)
+    
+    return files_by_type
 
 def clean_text(text):
     """Clean extracted text by removing excessive whitespace and newlines."""
+    if not text:
+        return ""
+        
     # Replace multiple newlines and spaces with a single space
     text = ' '.join(text.split())
     
@@ -102,159 +128,142 @@ def clean_text(text):
     
     return text.strip()
 
-def extract_text_from_pdf(pdf_directory='./data/pdf/'):
+def extract_text_from_pdf():
     pdf_texts = []
-    pdf_files = glob.glob(os.path.join(pdf_directory, '*.pdf'))
+    files = get_files_with_bucket(bucket)['pdf']
+    temp_dir = ensure_temp_dir()
     
-    for pdf_file in pdf_files:
+    for blob in files:
         try:
-            with open(pdf_file, 'rb') as file:
+            # Create safe filename and full path
+            safe_name = safe_filename(blob.name)
+            temp_path = os.path.join(temp_dir, safe_name)
+            
+            # Download file to temporary storage
+            blob.download_to_filename(temp_path)
+            print(f"Downloaded file to: {temp_path}")
+            
+            with open(temp_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
                 pages_text = []
                 
                 for page in pdf_reader.pages:
                     page_text = page.extract_text()
                     if page_text:
-                        # Clean each page individually
                         cleaned_text = clean_text(page_text)
-                        if cleaned_text:  # Only add non-empty pages
+                        if cleaned_text:
                             pages_text.append(cleaned_text)
                 
-                if pages_text:  # Only process if we have valid text
-                    # Join pages with proper spacing
+                if pages_text:
                     final_text = '\n\n'.join(pages_text)
-                    
                     pdf_texts.append({
                         'type': 'pdf',
-                        'source': os.path.basename(pdf_file),
+                        'source': blob.name,
                         'content': final_text
                     })
-                    print(f"Successfully processed {os.path.basename(pdf_file)}")
-        except Exception as e:
-            print(f"Error processing PDF {pdf_file}: {e}")
-    
-    print(f"Extracted {len(pdf_texts)} PDFs.")
-    return pdf_texts
-
-def extract_text_from_images(image_directory='./data/images/'):
-    image_texts = []
-    image_files = glob.glob(os.path.join(image_directory, '*.[jJ][pP][gG]')) + \
-                 glob.glob(os.path.join(image_directory, '*.[pP][nN][gG]'))
-    
-    print(f"Found image files: {image_files}")
-    
-    for image_file in image_files:
-        try:
-            print(f"Processing image: {image_file}")
-            # Perform OCR
-            results = reader.readtext(image_file)
-            text = ' '.join([result[1] for result in results])  # Extract text from results
-            
-            if text.strip():  # Only add if there's actual text content
-                image_texts.append({
-                    'type': 'image',
-                    'source': os.path.basename(image_file),
-                    'content': text
-                })
-                print(f"Successfully extracted text from {image_file}")
-        except Exception as e:
-            print(f"Error processing image {image_file}: {str(e)}")
-    
-    print(f"Extracted {len(image_texts)} images.")
-    return image_texts
-
-def extract_text_from_audio(audio_directory='./data/audio/'):
-    audio_texts = []
-    audio_files = glob.glob(os.path.join(audio_directory, '*.[mM][pP]3')) + \
-                 glob.glob(os.path.join(audio_directory, '*.[wW][aA][vV]'))
-    
-    print(f"Found audio files: {audio_files}")
-    
-    for audio_file in audio_files:
-        try:
-            print(f"Processing audio: {audio_file}")
-            
-            # Convert mp3 to wav if necessary
-            if audio_file.lower().endswith('.mp3'):
-                print("Converting MP3 to WAV...")
-                audio = AudioSegment.from_mp3(audio_file)
-                wav_path = audio_file.rsplit('.', 1)[0] + '.wav'
-                audio.export(wav_path, format='wav')
-                audio_file = wav_path
-                print(f"Converted to WAV: {wav_path}")
-
-            # Use Whisper for transcription
-            print("Performing speech recognition with Whisper...")
-            result = whisper_model.transcribe(audio_file, fp16=False)
-            text = result["text"]
-            
-            if text.strip():  # Only add if there's actual text content
-                audio_texts.append({
-                    'type': 'audio',
-                    'source': os.path.basename(audio_file),
-                    'content': text
-                })
-                print(f"Successfully extracted text from {audio_file}")
-            
-            # Clean up temporary WAV file if we created one
-            if audio_file.endswith('.wav') and audio_file != audio_files[0]:
-                os.remove(wav_path)
-                print(f"Cleaned up temporary WAV file: {wav_path}")
-                
-        except Exception as e:
-            print(f"Error processing audio {audio_file}: {str(e)}")
-            print(f"Full error details: {e.__class__.__name__}: {str(e)}")
-    
-    print(f"Extracted {len(audio_texts)} audio chunks.")
-    return audio_texts
-
-def extract_text_from_video(video_directory='./data/video/'):
-    video_texts = []
-    video_files = glob.glob(os.path.join(video_directory, '*.[mM][pP]4'))
-    
-    recognizer = sr.Recognizer()
-    
-    for video_file in video_files:
-        try:
-            # Extract audio from video
-            video = VideoFileClip(video_file)
-            audio = video.audio
-            
-            # Save audio temporarily
-            temp_audio = 'temp_audio.wav'
-            audio.write_audiofile(temp_audio)
-            
-            # Perform speech recognition on the audio
-            with sr.AudioFile(temp_audio) as source:
-                audio_data = recognizer.record(source)
-                text = recognizer.recognize_google(audio_data)
-                
-                if text.strip():  # Only add if there's actual text content
-                    video_texts.append({
-                        'type': 'video',
-                        'source': os.path.basename(video_file),
-                        'content': text
-                    })
+                    print(f"Successfully processed {blob.name}")
             
             # Clean up temporary file
-            os.remove(temp_audio)
-            video.close()
+            os.remove(temp_path)
             
         except Exception as e:
-            print(f"Error processing video {video_file}: {e}")
+            print(f"Error processing PDF {blob.name}: {e}")
+            import traceback
+            print(traceback.format_exc())
     
-    return video_texts
+    return pdf_texts
+
+def extract_text_from_images():
+    image_texts = []
+    files = get_files_with_bucket(bucket)['image']
+    temp_dir = ensure_temp_dir()
+    
+    for blob in files:
+        try:
+            # Create safe filename and full path
+            safe_name = safe_filename(blob.name)
+            temp_path = os.path.join(temp_dir, safe_name)
+            
+            # Download file to temporary storage
+            blob.download_to_filename(temp_path)
+            print(f"Downloaded file to: {temp_path}")
+            
+            # Perform OCR
+            results = reader.readtext(temp_path)
+            text = ' '.join([result[1] for result in results])
+            
+            if text.strip():
+                image_texts.append({
+                    'type': 'image',
+                    'source': blob.name,
+                    'content': text
+                })
+                print(f"Successfully extracted text from {blob.name}")
+            
+            # Clean up temporary file
+            os.remove(temp_path)
+            
+        except Exception as e:
+            print(f"Error processing image {blob.name}: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+    
+    return image_texts
+
+def extract_text_from_audio():
+    audio_texts = []
+    files = get_files_with_bucket(bucket)['audio']
+    temp_dir = ensure_temp_dir()
+    
+    for blob in files:
+        try:
+            # Create safe filename and full path
+            safe_name = safe_filename(blob.name)
+            temp_path = os.path.join(temp_dir, safe_name)
+            
+            # Download file to temporary storage
+            blob.download_to_filename(temp_path)
+            print(f"Downloaded file to: {temp_path}")
+            
+            # Convert mp3 to wav if necessary
+            if temp_path.lower().endswith('.mp3'):
+                audio = AudioSegment.from_mp3(temp_path)
+                wav_path = temp_path.rsplit('.', 1)[0] + '.wav'
+                audio.export(wav_path, format='wav')
+                os.remove(temp_path)  # Remove original mp3
+                temp_path = wav_path
+
+            # Use Whisper for transcription
+            result = whisper_model.transcribe(temp_path, fp16=False)
+            text = result["text"]
+            
+            if text.strip():
+                audio_texts.append({
+                    'type': 'audio',
+                    'source': blob.name,
+                    'content': text
+                })
+                print(f"Successfully extracted text from {blob.name}")
+            
+            # Clean up temporary file
+            os.remove(temp_path)
+            
+        except Exception as e:
+            print(f"Error processing audio {blob.name}: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+    
+    return audio_texts
 
 def collect_data():
     try:
         data = {}
+        
         # Collect and validate data from each source
         sources = {
-            'emails': fetch_email_data,
             'pdfs': extract_text_from_pdf,
             'images': extract_text_from_images,
-            'audio': extract_text_from_audio,
-            # 'video': extract_text_from_video
+            # 'audio': extract_text_from_audio
         }
         
         for source, fetcher in sources.items():
@@ -264,7 +273,6 @@ def collect_data():
                     data[source] = result
             except Exception as e:
                 print(f"Error collecting {source} data: {e}")
-                # Continue with other sources if one fails
                 
         return data if data else None
     except Exception as e:
@@ -500,59 +508,160 @@ def format_document_context(doc_data):
 @app.route('/api/data-lake', methods=['POST'])
 def data_lake_embeddings():
     try:
-        # get company_id from body
-        company_id = request.json.get('company_id')
+        company_id = request.form.get('company_id')
         if not company_id:
             return jsonify({"error": "Company ID is required"}), 400
 
-        # Safely delete existing documents if any exist
-        collection_ref = db.collection(f'company-{company_id}-texts')
-        try:
-            batch_size = 100
-            docs = collection_ref.limit(batch_size).stream()
-            deleted = 0
-
-            # Only attempt deletion if documents exist
-            while docs:
-                batch = db.batch()
-                doc_list = list(docs)  # Convert to list to check if empty
-                if not doc_list:
-                    break
-                
-                for doc in doc_list:
-                    batch.delete(doc.reference)
-                    print(f"Deleted document: {doc.id}")
-                    deleted += 1
-                batch.commit()
-                docs = collection_ref.limit(batch_size).stream()
+        # Handle the credentials file
+        if 'credentials' not in request.files:
+            return jsonify({"error": "No credentials file provided"}), 400
             
-            print(f"Successfully deleted {deleted} documents")
-        except Exception as e:
-            print(f"Error during deletion: {e}")
-            # Continue with the rest of the process even if deletion fails
+        credentials_file = request.files['credentials']
+        if credentials_file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
 
-        # Fetch data from the data lake API
-        data = collect_data()
-        if data is None:
-            return jsonify({"error": "Failed to collect data"}), 500
-
-        # Extract text from the data
-        text_data = extract_text_from_data(data)
+        # Save the credentials file temporarily
+        temp_cred_path = f'temp_cred_{company_id}.json'
+        credentials_file.save(temp_cred_path)
         
-        # Process and embed the text data
-        embeddings_list = batch_embed_chunks_with_labels(text_data, company_id)
-        
-        # Send the embeddings to Pinecone using company-specific namespace
-        if embeddings_list:
+        try:
+            # Get the existing app or create new one
             try:
-                namespace = f"company-{company_id}"
-                index.upsert(vectors=embeddings_list, namespace=namespace)
-            except Exception as e:
-                print(f"Error upserting to Pinecone: {e}")
-                return jsonify({"error": "Failed to store embeddings"}), 500
-        
-        return jsonify({"message": "Data processed and stored successfully", "count": len(embeddings_list)})
+                existing_app = firebase_admin.get_app(f'app-{company_id}')
+                firebase_admin.delete_app(existing_app)
+            except ValueError:
+                pass  # App doesn't exist yet, which is fine
+
+            # Initialize new Firebase app with the uploaded credentials
+            new_cred = credentials.Certificate(temp_cred_path)
+            new_app = firebase_admin.initialize_app(new_cred, {
+                'storageBucket': f"{json.load(open(temp_cred_path))['project_id']}.firebasestorage.app"
+            }, name=f'app-{company_id}')
+            
+            # Get the bucket from the new app
+            company_bucket = storage.bucket(app=new_app)
+            
+            # Process files using the company's bucket
+            files_by_type = {
+                'pdf': [],
+                'image': [],
+                'audio': [],
+                'video': []
+            }
+            
+            # List all files in the bucket
+            print("Listing files from bucket...")
+            blobs = company_bucket.list_blobs()
+            for blob in blobs:
+                filename = blob.name.lower()
+                if filename.endswith(('.pdf')):
+                    files_by_type['pdf'].append(blob)
+                elif filename.endswith(('.jpg', '.jpeg', '.png')):
+                    files_by_type['image'].append(blob)
+                elif filename.endswith(('.mp3', '.wav')):
+                    files_by_type['audio'].append(blob)
+                elif filename.endswith(('.mp4')):
+                    files_by_type['video'].append(blob)
+            
+            print(f"Found files: {files_by_type}")
+
+            # Process the files
+            data = {}
+            
+            # Process PDFs
+            if files_by_type['pdf']:
+                pdf_texts = []
+                for blob in files_by_type['pdf']:
+                    try:
+                        temp_path = f"/tmp/{safe_filename(blob.name)}"
+                        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+                        blob.download_to_filename(temp_path)
+                        
+                        with open(temp_path, 'rb') as file:
+                            pdf_reader = PyPDF2.PdfReader(file)
+                            pages_text = []
+                            
+                            for page in pdf_reader.pages:
+                                page_text = page.extract_text()
+                                if page_text:
+                                    cleaned_text = clean_text(page_text)
+                                    if cleaned_text:
+                                        pages_text.append(cleaned_text)
+                            
+                            if pages_text:
+                                final_text = '\n\n'.join(pages_text)
+                                pdf_texts.append({
+                                    'type': 'pdf',
+                                    'source': blob.name,
+                                    'content': final_text
+                                })
+                                print(f"Successfully processed {blob.name}")
+                        
+                        os.remove(temp_path)
+                    except Exception as e:
+                        print(f"Error processing PDF {blob.name}: {e}")
+                
+                if pdf_texts:
+                    data['pdfs'] = pdf_texts
+
+            # Process Images
+            if files_by_type['image']:
+                image_texts = []
+                for blob in files_by_type['image']:
+                    try:
+                        temp_path = f"/tmp/{safe_filename(blob.name)}"
+                        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+                        blob.download_to_filename(temp_path)
+                        
+                        results = reader.readtext(temp_path)
+                        text = ' '.join([result[1] for result in results])
+                        
+                        if text.strip():
+                            image_texts.append({
+                                'type': 'image',
+                                'source': blob.name,
+                                'content': text
+                            })
+                            print(f"Successfully processed {blob.name}")
+                        
+                        os.remove(temp_path)
+                    except Exception as e:
+                        print(f"Error processing image {blob.name}: {e}")
+                
+                if image_texts:
+                    data['images'] = image_texts
+
+            # Process the extracted data
+            if data:
+                text_data = extract_text_from_data(data)
+                embeddings_list = batch_embed_chunks_with_labels(text_data, company_id)
+                
+                if embeddings_list:
+                    try:
+                        namespace = f"company-{company_id}"
+                        index.upsert(vectors=embeddings_list, namespace=namespace)
+                    except Exception as e:
+                        print(f"Error upserting to Pinecone: {e}")
+                        return jsonify({"error": "Failed to store embeddings"}), 500
+                
+                    return jsonify({
+                        "message": "Data processed and stored successfully", 
+                        "count": len(embeddings_list)
+                    })
+                else:
+                    return jsonify({"message": "No files found to process"}), 200
+
+        finally:
+            # Clean up
+            if f'app-{company_id}' in firebase_admin._apps:
+                firebase_admin.delete_app(firebase_admin.get_app(f'app-{company_id}'))
+            if os.path.exists(temp_cred_path):
+                os.remove(temp_cred_path)
+            
     except Exception as e:
+        print(f"Error in data lake processing: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/process-query', methods=['POST'])
@@ -735,6 +844,73 @@ Answer:"""
     else:
         print(f"Ans resp: {text}")
         return {"answer": text}
+
+@app.route('/api/profile/files', methods=['POST'])
+def get_storage_files():
+    try:
+        # Get company ID from POST request body
+        data = request.get_json()
+        company_id = data.get('company_id')
+        
+        if not company_id:
+            return jsonify({"error": "Company ID is required"}), 400
+
+        # Initialize files structure
+        files = {
+            'pdf': [],
+            'image': [],
+            'audio': [],
+            'video': [],
+            'other': []
+        }
+        
+        blobs = bucket.list_blobs()
+        # Process each file in storage
+        for blob in blobs:
+            print(blob, "blob")
+            file_info = {
+                'name': blob.name,
+                'size': blob.size,
+                'updated': blob.updated.isoformat() if blob.updated else '',
+                'contentType': blob.content_type
+            }
+
+            # Categorize based on filename
+            filename = blob.name.lower()
+            if filename.endswith(('.pdf')):
+                files['pdf'].append(file_info)
+            elif filename.endswith(('.jpg', '.jpeg', '.png')):
+                files['image'].append(file_info)
+            elif filename.endswith(('.mp3', '.wav')):
+                files['audio'].append(file_info)
+            elif filename.endswith(('.mp4')):
+                files['video'].append(file_info)
+            else:
+                files['other'].append(file_info)
+
+        # Calculate statistics
+        stats = {
+            'total_files': sum(len(files[category]) for category in files),
+            'total_size': sum(
+                sum(file['size'] for file in files[category]) 
+                for category in files
+            ),
+            'by_type': {
+                category: len(files[category]) 
+                for category in files
+            }
+        }
+
+        return jsonify({
+            "files": files,
+            "statistics": stats
+        })
+
+    except Exception as e:
+        print(f"Error fetching storage files: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
