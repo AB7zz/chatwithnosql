@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev-backend": "cd packages/backend/cosine && python app.py && cd ../data-lake && python app.py && cd ../embeddings && python app.py && cd ../pinecone && python app.py && cd ../gemini && python app.py "
+    "dev-backend": "cd packages/backend && python app.py"
   },
   "workspaces": [
     "packages/*"

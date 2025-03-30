@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Database, Search, MessageSquare, Brain, ArrowRight } from 'lucide-react';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -12,6 +14,8 @@ const Home = () => {
   const heroRef = useRef(null);
   const featuresRef = useRef(null);
   const useCasesRef = useRef(null);
+
+  const [user] = useAuthState(auth)
 
   useEffect(() => {
     // Reset any existing animations
@@ -61,6 +65,7 @@ const Home = () => {
       force3D: true,
       clearProps: "all"
     });
+    console.log(user)
   }, []);
 
   const features = [
@@ -132,7 +137,14 @@ const Home = () => {
           initial={{ opacity: 1 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate('/choose')}
+          onClick={() => {
+            // if user is logged in navigate to /chat
+            if (user) {
+              navigate('/chat')
+            } else {
+              navigate('/login')
+            }
+          }}
           className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-4 rounded-lg font-medium text-lg flex items-center space-x-2 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
         >
           <span>Get Started</span>

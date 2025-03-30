@@ -114,8 +114,8 @@ const Login = () => {
 
   const renderCompanyForm = () => (
     <>
-      <div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+      <div className="">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
           Company Details
         </h2>
       </div>
@@ -127,7 +127,7 @@ const Login = () => {
         )}
         
         <div>
-          <label htmlFor="company-name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="company-name" className="block text-sm font-medium text-white">
             Company Name
           </label>
           <input
@@ -135,14 +135,14 @@ const Login = () => {
             name="name"
             type="text"
             required
-            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
             value={companyDetails.name}
             onChange={handleCompanyDetailsChange}
           />
         </div>
 
         <div>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="address" className="block text-sm font-medium text-white">
             Address
           </label>
           <input
@@ -150,14 +150,14 @@ const Login = () => {
             name="address"
             type="text"
             required
-            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
             value={companyDetails.address}
             onChange={handleCompanyDetailsChange}
           />
         </div>
 
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="phone" className="block text-sm font-medium text-white">
             Phone Number
           </label>
           <input
@@ -165,21 +165,21 @@ const Login = () => {
             name="phone"
             type="tel"
             required
-            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
             value={companyDetails.phone}
             onChange={handleCompanyDetailsChange}
           />
         </div>
 
         <div>
-          <label htmlFor="industry" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="industry" className="block text-sm font-medium text-white">
             Industry
           </label>
           <select
             id="industry"
             name="industry"
             required
-            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
             value={companyDetails.industry}
             onChange={handleCompanyDetailsChange}
           >
@@ -194,14 +194,14 @@ const Login = () => {
         </div>
 
         <div>
-          <label htmlFor="size" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="size" className="block text-sm font-medium text-white">
             Company Size
           </label>
           <select
             id="size"
             name="size"
             required
-            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
             value={companyDetails.size}
             onChange={handleCompanyDetailsChange}
           >
@@ -216,14 +216,14 @@ const Login = () => {
 
         {/* Add Data Lake Source Selection */}
         <div>
-          <label htmlFor="dataLakeSource" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="dataLakeSource" className="block text-sm font-medium text-white">
             Data Lake Source
           </label>
           <select
             id="dataLakeSource"
             name="dataLakeSource"
             required
-            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
             value={companyDetails.dataLakeSource}
             onChange={handleCompanyDetailsChange}
           >
@@ -237,7 +237,7 @@ const Login = () => {
         {/* Show file upload only if Firebase is selected */}
         {companyDetails.dataLakeSource === 'firebase' && (
           <div>
-            <label htmlFor="credentials" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="credentials" className="block text-sm font-medium text-white">
               Firebase Credentials JSON
             </label>
             <input
@@ -264,7 +264,7 @@ const Login = () => {
           <button
             type="button"
             onClick={() => setCurrentStep(1)}
-            className="group relative w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="group relative w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-900 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Back
           </button>
@@ -280,8 +280,8 @@ const Login = () => {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
+    <div className="py-20 min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+      <div className="max-w-md w-full space-y-8 p-8 bg-gray-800 rounded-lg shadow-md">
         {/* Show toggle buttons only on first step or login */}
         {(isLogin || currentStep === 1) && (
           <div className="flex justify-center space-x-4 mb-8">
@@ -333,7 +333,7 @@ const Login = () => {
                 name="email"
                 type="email"
                 required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -350,7 +350,7 @@ const Login = () => {
                 name="password"
                 type="password"
                 required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -368,7 +368,7 @@ const Login = () => {
                   name="confirmPassword"
                   type="password"
                   required
-                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                   placeholder="Confirm Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

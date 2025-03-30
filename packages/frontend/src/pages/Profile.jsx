@@ -3,11 +3,14 @@ import { motion } from 'framer-motion';
 import { FaEnvelope, FaPhone, FaUsers, FaGlobe, FaComments, FaFile, FaImage, FaMusic, FaVideo } from 'react-icons/fa';
 import axios from 'axios';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
 
 const Profile = () => {
   const [fileData, setFileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user] = useAuthState(auth);
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -80,7 +83,7 @@ const Profile = () => {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center p-8"
+      className="pt-20 min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center p-8"
     >
       <motion.h1 
         initial={{ y: -50 }}
@@ -94,7 +97,29 @@ const Profile = () => {
         <div className="w-full max-w-6xl">
           {/* Statistics Summary */}
           <div className="bg-gray-800/50 rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-semibold text-white mb-4">Statistics</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white">Statistics</h2>
+              <button 
+                onClick={async () => {
+                  try {
+                    const formData = new FormData();
+                    formData.append('update', 'true');
+                    formData.append('company_id', user.uid);
+                    await axios.post('http://localhost:5000/api/data-lake', formData, {
+                      headers: {
+                        'Content-Type': 'multipart/form-data',
+                      },
+                    });
+                    // Optionally refresh data here
+                  } catch (error) {
+                    console.error('Error updating data:', error);
+                  }
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+              >
+                Update
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-700/50 rounded-lg p-4">
                 <p className="text-gray-400">Total Files</p>

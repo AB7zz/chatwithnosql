@@ -11,9 +11,9 @@ const Navbar = () => {
   const [user] = useAuthState(auth);
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Home' },
-    { path: '/choose', icon: Database, label: 'Warehouse' },
-    { path: '/chat', icon: MessageSquare, label: 'Chat' },
+    { path: '/', icon: Home, label: 'Home', visible: true },
+    // { path: '/choose', icon: Database, label: 'Warehouse' },
+    { path: '/chat', icon: MessageSquare, label: 'Chat', visible: user && true },
   ];
 
   const handleLogout = async () => {
@@ -48,12 +48,14 @@ const Navbar = () => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
+              const isVisible = item.visible || false;
               
               return (
                 <motion.div
                   key={item.path}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.95 }}
+                  className={isVisible ? '' : 'hidden'}
                 >
                   <Link
                     to={item.path}

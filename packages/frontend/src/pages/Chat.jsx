@@ -22,11 +22,14 @@ import {
   setDoc,
   deleteDoc,
 } from "firebase/firestore";
+import { auth } from "../firebase/config";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 // Register chart.js components
 Chart.register(...registerables);
 
 const Chat = () => {
+  const [user] = useAuthState(auth)
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isChatActive, setIsChatActive] = useState(false);
@@ -118,11 +121,17 @@ const Chat = () => {
     try {
       const roomsRef = collection(db, "chatrooms");
       const roomsSnap = await getDocs(roomsRef);
-      const roomsData = roomsSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate().toLocaleString() || "Unknown",
-      }));
+      const roomsData = roomsSnap.docs.map((doc) => {
+        console.log(doc.data())
+        if (!doc.data()?.email) return;
+        if (doc.data()?.email !== user.email) return;
+        return({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate().toLocaleString() || "Unknown",
+        })
+      }).filter(Boolean);
+      console.log(roomsData)
       setChatRooms(roomsData);
     } catch (error) {
       console.error("Error fetching chat rooms:", error);
@@ -167,7 +176,7 @@ const Chat = () => {
 
       // Process with AI
       const res = await axios.post("http://localhost:5000/api/process-query", {
-        company_id: "makeaton",
+        company_id: user.uid,
         query: input,
       });
 
@@ -228,6 +237,7 @@ const Chat = () => {
         title: newRoomName,
         timestamp: new Date(),
         lastMessage: null,
+        email: user.email
       });
 
       setCurrentRoomId(newRoomName);
@@ -238,11 +248,6 @@ const Chat = () => {
 
       // Refresh chat rooms list
       fetchChatRooms();
-
-      // Initialize data lake
-      await axios.post("http://localhost:5000/api/data-lake", {
-        company_id: "makeaton",
-      });
     } catch (error) {
       console.error("Error creating new chat:", error);
     }
@@ -269,7 +274,7 @@ const Chat = () => {
         </button>
 
         <div className="space-y-2">
-          {chatRooms.map((room) => (
+          {chatRooms && chatRooms.length > 0 && chatRooms.map((room) => (
             <motion.div
               key={room.id}
               whileHover={{ scale: 1.02 }}
