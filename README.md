@@ -29,3 +29,5 @@ This project is meant to be used by large companies to search for information in
    - `cd packages/frontend`
    - `npm install`
 2. Run the frontend: `npm run dev`
+
+

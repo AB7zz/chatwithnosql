@@ -301,6 +301,7 @@ def collect_data(bucket):
         print(f"Error collecting data: {e}")
         return None
 
+
 # Helper Functions for Embeddings
 def extract_text_from_data(data):
     """
@@ -417,6 +418,7 @@ def chunk_text(texts, max_chunk_size=512, overlap=50):
             })
     
     return chunked_texts
+    
 
 def batch_embed_chunks_with_labels(text_data, company_id):
     """
@@ -507,6 +509,7 @@ def batch_embed_chunks_with_labels(text_data, company_id):
     
     return embeddings_list
 
+
 def format_document_context(doc_data):
     """Format document data into a structured context string"""
     text = doc_data.get('text', '')
@@ -593,9 +596,8 @@ def data_lake_embeddings():
                 text_data = extract_text_from_data(data)
                 embeddings_list = batch_embed_chunks_with_labels(text_data, company_id)
                 if embeddings_list:
-                    try:
+                    try:    
                         namespace = f"company-{company_id}"
-                        # index.delete(delete_all=True, namespace=namespace)
                         index.upsert(vectors=embeddings_list, namespace=namespace)
                     except Exception as e:
                         print(f"Error upserting to Pinecone: {e}")
@@ -751,8 +753,8 @@ Generate appropriate chart data based on the context and query:"""
 
 When responding:
 1. Consider the conversation history and previous queries above to maintain context
-2. Relate your answer to earlier questions if relevant
-3. If the current query seems to reference or follow up on a previous topic, acknowledge that connection
+2. Relate your answer to earlier questions if relevant.
+3. If the current query seems to reference or follow up on a previous topic, do not explicitly acknowledge that connection
 4. Provide a clear and concise response that directly addresses the query
 5. Provide answers in bullet points or short paragraphs for readability
 

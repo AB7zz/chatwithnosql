@@ -2,3 +2,4 @@ credentials.json
 data
 serviceAccountKey.json
 credentials_*.json
+testServiceAccountKey.json
